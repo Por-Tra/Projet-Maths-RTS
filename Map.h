@@ -1,28 +1,43 @@
-/*
- * Filename: c:/Users/lucas/Documents/Cour UCA/3A/Modélisation mathématique/Projet-Maths-RTS/Map.h
- * Path: c:/Users/lucas
- * Created Date: Wednesday, September 9th 2026, 4:23:19 pm
- * Author: Lucas Contreras Hodapp
- * 
- * Copyright (c) 2026 Your Company
- */
-
 #ifndef _MAP_H
 #define _MAP_H
 
 #include <QWidget>
+#include <QPainter>
+#include <QThread>
 
 class Map: public QWidget
 {
 public:
-    Map(QWidget *parent = nullptr);
-    virtual ~Map();
+	Map(int x, int y, QWidget* parent = nullptr) : QWidget(parent), size_x(x), size_y(y) 
+    {
+    }
+	virtual ~Map() = default;
 
-    QSize sizeHint() const override;
-    QSize minimumSizeHint() const override;
-    void paintEvent(QPaintEvent *event) override;
+    QSize sizeHint() const override
+    {
+		return QSize(size_x, size_y);
+    }
+    QSize minimumSizeHint() const override
+    {
+        return sizeHint();
+    }
+    void paintEvent(QPaintEvent* event) override
+    {
+        QPainter painter(this);
+    }
 
-    void start();
+    void start()
+    {
+        QThread* thread = QThread::create([this]()
+            {
+                // TODO
+            });
+
+        thread->start();
+    }
+
+private:
+    int size_x, size_y;
 };
 
 #endif

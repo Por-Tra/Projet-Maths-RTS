@@ -5,7 +5,7 @@ int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
 
-    Map map;
+    Map map(800, 400);
     map.show();
     map.start();
 
