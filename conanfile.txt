@@ -1,5 +1,5 @@
 [requires]
-sfml/2.6.1
+sfml/3.1.0
 
 [generators]
 CMakeDeps
