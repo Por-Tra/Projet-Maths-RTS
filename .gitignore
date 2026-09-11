@@ -64,4 +64,5 @@ CMakeUserPresets.json
 .vs/
 .vscode/
 out/
+run.sh
 
