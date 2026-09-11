@@ -58,8 +58,10 @@ compile_commands.json
 
 // *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
-/out
-.vs
-CMakePresets.json
+build/
 CMakeUserPresets.json
+*.user
+.vs/
+.vscode/
+out/
 
