@@ -1,29 +1,20 @@
 #include <SFML/Graphics.hpp>
 
+#include "MyWindow.h"
+
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode(800, 600), "SFML + Conan - Fenetre de test");
-    window.setFramerateLimit(60);
+    
+    MyWindow window("My Window", 800, 600);
 
-    sf::CircleShape shape(100.f);
-    shape.setFillColor(sf::Color(50, 200, 120));
-    shape.setPosition(300.f, 200.f);
+    CircleShape* circle = new CircleShape(50.0f, 100.0f, 100.0f, sf::Color::Green);
+    window.addShape(circle);
 
-    while (window.isOpen())
-    {
-        sf::Event event{};
-        while (window.pollEvent(event))
-        {
-            if (event.type == sf::Event::Closed)
-            {
-                window.close();
-            }
-        }
+    
 
-        window.clear(sf::Color(30, 30, 30));
-        window.draw(shape);
-        window.display();
-    }
+
+    window.run();
+
 
     return 0;
 }
