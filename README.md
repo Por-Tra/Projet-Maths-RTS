@@ -44,6 +44,20 @@ conan install . --build=missing -s build_type=Debug
 cmake --build --preset conan-debug
 ```
 
+## Template `run.sh`
+
+```shell
+
+cmake -B build
+cmake --build build
+
+
+# Path to RTS-PROJECT executable (change if needed)
+./build/RTS-PROJECT
+
+```
+
+
 ## Utilisation avec Visual Studio 2022
 
 1. Lancez `conan install . --build=missing -s build_type=Release`
