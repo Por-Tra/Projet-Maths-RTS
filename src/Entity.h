@@ -1,20 +1,30 @@
 #ifndef ENTITY_H
 #define ENTITY_H
 
+#include <string>
+
 // Abstract function used to create Entities
 
-class Entity {
-    // TODO - Add other values used for each entities
-
-    float hunger_level = 100.0f;
+class Entity
+{
+protected:
+    std::string name;
 
 public:
-    Entity() = default;
+    explicit Entity() = default;
+    explicit Entity(const std::string& name)
+        : name(name)
+    {
+    }
 
-    virtual ~Entity();
-    virtual void update() = 0; // Only to make abstract
+    virtual ~Entity() = default;
 
-    // TODO - Base methods of Entities
+    const std::string& getName() const
+    {
+        return name;
+    }
+
+    virtual void update() = 0;
 };
 
 #endif // ENTITY_H

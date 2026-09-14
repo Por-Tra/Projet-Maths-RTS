@@ -16,9 +16,12 @@ public:
         return cell_content == nullptr;
     }
 
-    void clearContent()
+    Entity* clearContent()
     {
+        Entity* entity = cell_content;
         cell_content = nullptr;
+
+        return entity;
     }
 
     //* Setter and getter

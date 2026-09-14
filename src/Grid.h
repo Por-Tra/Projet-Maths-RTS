@@ -8,16 +8,16 @@
 #include "Cell.h"
 
 class Grid {
-    std::size_t width, height;
+    sf::Vector2<int> grid_size;
     std::vector<std::vector<Cell*>> grid;
 
 public:
-    Grid(std::size_t width, std::size_t height) : width(width), height(height), grid(height, std::vector<Cell<T>>(width))
+    Grid(sf::Vector2<int> grid_size) : grid_size(grid_size), grid(grid_size.y, std::vector<Cell*>(grid_size.x))
     {
         // Build a grid of empty cells
 
-        for (std::size_t y = 0; y < height; ++y) {
-            for (std::size_t x = 0; x < width; ++x) {
+        for (std::size_t y = 0; y < grid_size.y; ++y) {
+            for (std::size_t x = 0; x < grid_size.x; ++x) {
                 grid[y][x] = new Cell();
             }
         }
@@ -31,40 +31,46 @@ public:
         }
     }
 
-    std::size_t getWidth() const { return width; }
-    std::size_t getHeight() const { return height; }
+    int getWidth() const { return grid_size.x; }
+    int getHeight() const { return grid_size.y; }
 
-    //! @loazur check this   ----------------------------------------------
-    bool bounds(int x, int y) const {
-        return x >= 0 && y >= 0 && x < static_cast<int>(width) && y < static_cast<int>(height);
+    bool bounds(sf::Vector2<int> position) const {
+        return position.x >= 0 && position.y >= 0 && position.x < static_cast<int>(grid_size.x) && position.y < static_cast<int>(grid_size.y);
     }
 
-    Cell& getCellAt(int x, int y) {
-        if (!bounds(x, y)) {
+    Cell* getCellAt(sf::Vector2<int> position) {
+        if (!bounds(position)) {
             throw std::out_of_range("Grid::at out of limits");
         }
-        return *grid[y][x];
+        return grid[position.y][position.x];
     }
 
-    const Cell& getCellAt(int x, int y) const {
-        if (!bounds(x, y)) {
-            throw std::out_of_range("Grid::at out of limits");
+    void setCellAt(sf::Vector2<int> position, Entity* entity) {
+        if (!bounds(position)) {
+            std::cout << "Grid::clearCellAt out of limits" << std::endl;
+            return;
+
         }
-        return *grid[y][x];
+        grid[position.y][position.x]->setContent(entity);
     }
-    //! ----------------------------------------------
 
-    void setCellAt(int x, int y) {
-        if (!bounds(x, y)) {
-            throw std::out_of_range("Grid::set_cell_empty out of limits");
+    Entity* clearCellAt(sf::Vector2<int> position) {
+        if (!bounds(position)) {
+            std::cout << "Grid::clearCellAt out of limits" << std::endl;
+            return nullptr;
+
         }
-        grid[y][x]->clearContent();
+        return grid[position.y][position.x]->clearContent();
     }
 
+    void moveCellToPosition(sf::Vector2<int> cellAtPos, sf::Vector2<int> newPos) {
+        Entity* entity = clearCellAt(cellAtPos);
+        setCellAt(newPos, entity);
+    }
 
     friend std::ostream& operator<<(std::ostream& os, const Grid& grid) {
-        for (std::size_t y = 0; y < grid.height; ++y) {
-            for (std::size_t x = 0; x < grid.width; ++x) {
+        for (std::size_t y = 0; y < grid.getHeight(); ++y) {
+            for (std::size_t x = 0; x < grid.getWidth(); ++x) {
                 if (grid.grid[y][x]->isEmpty()) {
                     os << ". ";
                 } else {
