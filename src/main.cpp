@@ -1,24 +1,24 @@
 #include <SFML/Graphics.hpp>
 
+#include "MathsFormulas.h"
 #include "MyWindow.h"
 
-#if defined(_MSC_VER) // Si on compile sous Windows avec MSVC
+#if defined(_MSC_VER) // Compile for Windows
     #define EXPORT_API extern "C" __declspec(dllexport)
-#else // Pour Linux / macOS
+#else // Compile for Linux / MacOS
     #define EXPORT_API extern "C" __attribute__((visibility("default")))
 #endif
 
 int main()
 {
-    
     MyWindow window("My Window", 800, 600);
 
-    // Cercle Vert
+    // Green Circle
     auto circle_shape_green = new sf::CircleShape(30, 30);
     circle_shape_green->setFillColor(sf::Color::Green);
     window.addShape(circle_shape_green);
 
-    // Cercle Rouge
+    // Red Circle
     auto circle_shape_red = new sf::CircleShape(30, 30);
     circle_shape_red->setFillColor(sf::Color::Red);
     circle_shape_red->setPosition(sf::Vector2f(10, 10));

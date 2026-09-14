@@ -7,6 +7,8 @@
 
 class MyWindow
 {
+    sf::RenderWindow window;
+    std::vector<sf::Shape*> shapes; // All shape on the window
 
 public:
     MyWindow(const char* title, unsigned width, unsigned height)
@@ -66,10 +68,6 @@ public:
         }
 
     }
-
-private:
-    sf::RenderWindow window;
-    std::vector<sf::Shape*> shapes; // All shape on the window
 
 };
 
