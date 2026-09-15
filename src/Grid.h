@@ -4,85 +4,89 @@
 #include <vector>
 #include <stdexcept>
 #include <iostream>
+#include <SFML/Graphics.hpp>
 
 #include "Cell.h"
 
 class Grid {
-    sf::Vector2<int> grid_size;
-    std::vector<std::vector<Cell*>> grid;
+    int32_t width;
+    int32_t height;
+    int32_t cols;
+    int32_t rows;
+    std::vector<std::vector<Cell*>> gridVector;
+    bool isRunning;
 
 public:
-    Grid(sf::Vector2<int> grid_size) : grid_size(grid_size), grid(grid_size.y, std::vector<Cell*>(grid_size.x))
+    Grid(int gridWidth, int gridHeight)
     {
-        // Build a grid of empty cells
+        this->width = gridWidth;
+        this->height = gridHeight;
 
-        for (std::size_t y = 0; y < grid_size.y; ++y) {
-            for (std::size_t x = 0; x < grid_size.x; ++x) {
-                grid[y][x] = new Cell();
-            }
-        }
+        this->cols = width / static_cast<int32_t>(Cell::CELL_SIZE);
+        this->rows = height / static_cast<int32_t>(Cell::CELL_SIZE);
+
+        this->isRunning = false;
     }
 
     ~Grid() {
-        for (auto& row: grid) {
-            for (Cell* cell: row) {
+        for (auto& row : gridVector) {
+            for (Cell* cell : row) {
                 delete cell;
             }
         }
     }
 
-    int getWidth() const { return grid_size.x; }
-    int getHeight() const { return grid_size.y; }
+    // ----------------------------
 
-    bool bounds(sf::Vector2<int> position) const {
-        return position.x >= 0 && position.y >= 0 && position.x < static_cast<int>(grid_size.x) && position.y < static_cast<int>(grid_size.y);
-    }
-
-    Cell* getCellAt(sf::Vector2<int> position) {
-        if (!bounds(position)) {
-            throw std::out_of_range("Grid::at out of limits");
+    void initGridVector() {
+        for (int row = 0; row < rows; row++) {
+            std::vector<Cell*> cellVec;
+            for (int col = 0; col < cols; col++) {
+                cellVec.push_back(new Cell(col, row));
+            }
+            gridVector.push_back(cellVec);
         }
-        return grid[position.y][position.x];
     }
 
-    void setCellAt(sf::Vector2<int> position, Entity* entity) {
-        if (!bounds(position)) {
-            std::cout << "Grid::clearCellAt out of limits" << std::endl;
-            return;
+    void display(int gWidth, int gHeight) {
+        sf::RenderWindow window(sf::VideoMode(sf::Vector2u(gWidth, gHeight)), "Cellular Automata");
 
-        }
-        grid[position.y][position.x]->setContent(entity);
-    }
-
-    Entity* clearCellAt(sf::Vector2<int> position) {
-        if (!bounds(position)) {
-            std::cout << "Grid::clearCellAt out of limits" << std::endl;
-            return nullptr;
-
-        }
-        return grid[position.y][position.x]->clearContent();
-    }
-
-    void moveCellToPosition(sf::Vector2<int> cellAtPos, sf::Vector2<int> newPos) {
-        Entity* entity = clearCellAt(cellAtPos);
-        setCellAt(newPos, entity);
-    }
-
-    friend std::ostream& operator<<(std::ostream& os, const Grid& grid) {
-        for (std::size_t y = 0; y < grid.getHeight(); ++y) {
-            for (std::size_t x = 0; x < grid.getWidth(); ++x) {
-                if (grid.grid[y][x]->isEmpty()) {
-                    os << ". ";
-                } else {
-                    os << "X ";
+        while (window.isOpen() && isRunning)
+        {
+            while (const std::optional event = window.pollEvent())
+            {
+                if (event->is<sf::Event::Closed>())
+                {
+                    window.close();
                 }
             }
-            os << '\n';
-        }
 
-        return os;
+            window.clear(sf::Color::Black);
+
+            for (auto& row : gridVector) {
+                for (Cell* cell : row) {
+                    window.draw(cell->cell);
+                }
+            }
+
+            window.display();
+        }
     }
 
+    void setWidth(int gWidth) {
+        this->width = gWidth;
+    }
+
+    void setHeight(int gHeight) {
+        this->height = gHeight;
+    }
+
+    void run() {
+        std::cout << "Grid is running" << std::endl;
+        isRunning = true;
+        initGridVector();
+        display(width, height);
+    }
 };
 
 #endif // GRID_H

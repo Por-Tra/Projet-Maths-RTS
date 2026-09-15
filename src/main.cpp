@@ -3,7 +3,6 @@
 #include "Grid.h"
 #include "TestEntity.h"
 #include "MathsFormulas.h"
-#include "MyWindow.h"
 #include "TestEntity.h"
 
 #if defined(_MSC_VER) // Compile for Windows
@@ -12,17 +11,14 @@
     #define EXPORT_API extern "C" __attribute__((visibility("default")))
 #endif
 
+const int WINDOW_WIDTH = 800;
+const int WINDOW_HEIGHT = 600;
+
 int main()
 {
-    auto* grid = new Grid({10, 10});
-    MyWindow window("My Window", 800, 600, grid);
+    Grid grid(WINDOW_WIDTH, WINDOW_HEIGHT);
+    grid.run();
 
-    auto* testEntity = new TestEntity("CACA");
-    grid->setCellAt({0, 0}, testEntity);
-
-    std::cout << *grid;
-
-    window.run();
 
     return 0;
 }
