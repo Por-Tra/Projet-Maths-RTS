@@ -3,7 +3,6 @@
 #include "Grid.h"
 #include "TestEntity.h"
 #include "MathsFormulas.h"
-#include "MyWindow.h"
 #include "TestEntity.h"
 #include "Herbivore.h"
 
@@ -12,6 +11,9 @@
 #else // Compile for Linux / MacOS
     #define EXPORT_API extern "C" __attribute__((visibility("default")))
 #endif
+
+const int WINDOW_WIDTH = 800;
+const int WINDOW_HEIGHT = 600;
 
 int main()
 {
@@ -41,6 +43,9 @@ int main()
 
     // MyWindow window("My Window", 800, 600, grid);
     // window.run();
+    Grid grid(WINDOW_WIDTH, WINDOW_HEIGHT);
+    grid.run();
+
 
     return 0;
 }
