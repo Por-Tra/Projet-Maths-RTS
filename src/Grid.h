@@ -49,9 +49,14 @@ public:
         if (!bounds(position)) {
             std::cout << "Grid::clearCellAt out of limits" << std::endl;
             return;
-
         }
+
         grid[position.y][position.x]->setContent(entity);
+
+        if (entity)
+        {
+            entity->setPosition(position); // Update entity pos
+        } 
     }
 
     Entity* clearCellAt(sf::Vector2<int> position) {
@@ -65,7 +70,7 @@ public:
 
     void moveCellToPosition(sf::Vector2<int> cellAtPos, sf::Vector2<int> newPos) {
         Entity* entity = clearCellAt(cellAtPos);
-        setCellAt(newPos, entity);
+        setCellAt(newPos, entity); // Update entity pos
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Grid& grid) {
@@ -84,5 +89,15 @@ public:
     }
 
 };
+
+//! Dont touch pls
+inline void Entity::move(Grid& grid)
+{
+    sf::Vector2<int> newPosition = chooseDirection(grid);
+    if (grid.bounds(newPosition))
+    {
+        grid.moveCellToPosition(position, newPosition);
+    }
+}
 
 #endif // GRID_H
