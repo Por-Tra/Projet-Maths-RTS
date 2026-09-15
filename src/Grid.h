@@ -48,6 +48,20 @@ public:
         }
     }
 
+    void setCellAt(sf::Vector2<int> position, Entity* entity) {
+        if (!bounds(position)) {
+            std::cout << "Grid::clearCellAt out of limits" << std::endl;
+            return;
+        }
+
+        grid[position.y][position.x]->setContent(entity);
+
+        if (entity)
+        {
+            entity->setPosition(position); // Update entity pos
+        } 
+    }
+  
     void display(int gWidth, int gHeight) {
         sf::RenderWindow window(sf::VideoMode(sf::Vector2u(gWidth, gHeight)), "Cellular Automata");
 
@@ -73,6 +87,11 @@ public:
         }
     }
 
+    void moveCellToPosition(sf::Vector2<int> cellAtPos, sf::Vector2<int> newPos) {
+        Entity* entity = clearCellAt(cellAtPos);
+        setCellAt(newPos, entity); // Update entity pos
+    }
+  
     void setWidth(int gWidth) {
         this->width = gWidth;
     }
@@ -88,5 +107,15 @@ public:
         display(width, height);
     }
 };
+
+//! Dont touch pls
+inline void Entity::move(Grid& grid)
+{
+    sf::Vector2<int> newPosition = chooseDirection(grid);
+    if (grid.bounds(newPosition))
+    {
+        grid.moveCellToPosition(position, newPosition);
+    }
+}
 
 #endif // GRID_H
