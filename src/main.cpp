@@ -27,7 +27,7 @@ int main()
     std::cout << *grid;
 
     int t = 0;
-    while (t < 100) {
+    while (t < 1000) {
         H1->move(*grid);
         H2->move(*grid);
 
