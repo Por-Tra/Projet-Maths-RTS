@@ -1,9 +1,7 @@
 #include <SFML/Graphics.hpp>
 
 #include "Grid.h"
-#include "TestEntity.h"
 #include "MathsFormulas.h"
-#include "TestEntity.h"
 #include "Herbivore.h"
 
 #if defined(_MSC_VER) // Compile for Windows
@@ -17,7 +15,9 @@ const int WINDOW_HEIGHT = 600;
 
 int main()
 {
-    Grid* grid = new Grid({10, 10});
+    // Engine Test
+    Grid* grid = new Grid(WINDOW_WIDTH, WINDOW_HEIGHT);
+    grid->initGridVector();
     
     Herbivore* H1 = new Herbivore("Herbivore1");
     grid->setCellAt({0, 0}, H1);
@@ -41,10 +41,9 @@ int main()
     }
 
 
-    // MyWindow window("My Window", 800, 600, grid);
-    // window.run();
-    Grid grid(WINDOW_WIDTH, WINDOW_HEIGHT);
-    grid.run();
+    // graphic Test
+    Grid grid2(WINDOW_WIDTH, WINDOW_HEIGHT);
+    grid2.run();
 
 
     return 0;

@@ -48,18 +48,38 @@ public:
         }
     }
 
+    Cell* getCellAt(sf::Vector2<int> position) {
+        if (!bounds(position)) {
+            throw std::out_of_range("Grid::at out of limits");
+        }
+        return gridVector[position.y][position.x];
+    }
+
+    bool bounds(sf::Vector2<int> position) {
+        return position.x >= 0 && position.x < cols && position.y >= 0 && position.y < rows;
+    }
+
     void setCellAt(sf::Vector2<int> position, Entity* entity) {
         if (!bounds(position)) {
             std::cout << "Grid::clearCellAt out of limits" << std::endl;
             return;
         }
 
-        grid[position.y][position.x]->setContent(entity);
+        gridVector[position.y][position.x]->setContent(entity);
 
         if (entity)
         {
             entity->setPosition(position); // Update entity pos
         } 
+    }
+
+    Entity* clearCellAt(sf::Vector2<int> position) {
+        if (!bounds(position)) {
+            std::cout << "Grid::clearCellAt out of limits" << std::endl;
+            return nullptr;
+
+        }
+        return gridVector[position.y][position.x]->clearContent();
     }
   
     void display(int gWidth, int gHeight) {
@@ -100,11 +120,35 @@ public:
         this->height = gHeight;
     }
 
+    int32_t getWidth() const {
+        return width;
+    }
+
+    int32_t getHeight() const {
+        return height;
+    }
+
     void run() {
         std::cout << "Grid is running" << std::endl;
         isRunning = true;
         initGridVector();
         display(width, height);
+    }
+
+    // DEBUG
+    friend std::ostream& operator<<(std::ostream& os, const Grid& grid) {
+        for (std::size_t y = 0; y < grid.rows; ++y) {
+            for (std::size_t x = 0; x < grid.cols; ++x) {
+                if (grid.gridVector[y][x]->isEmpty()) {
+                    os << ". ";
+                } else {
+                    os << "X ";
+                }
+                
+            }
+            os << '\n';
+        }
+        return os;
     }
 };
 
