@@ -11,8 +11,8 @@
 class Grid {
     int32_t width;
     int32_t height;
-    int32_t cols;
-    int32_t rows;
+    int32_t cols; // number of columns = x
+    int32_t rows; // number of rows = y
     std::vector<std::vector<Cell*>> gridVector;
     bool isRunning;
 
@@ -26,6 +26,8 @@ public:
         this->rows = height / static_cast<int32_t>(Cell::CELL_SIZE);
 
         this->isRunning = false;
+
+        initGridVector(); // auto initialization
     }
 
     ~Grid() {
@@ -36,52 +38,16 @@ public:
         }
     }
 
-    // ----------------------------
-
-    void initGridVector() {
-        for (int row = 0; row < rows; row++) {
-            std::vector<Cell*> cellVec;
-            for (int col = 0; col < cols; col++) {
-                cellVec.push_back(new Cell(col, row));
-            }
-            gridVector.push_back(cellVec);
-        }
+    void run() {
+        std::cout << "Grid is running" << std::endl;
+        isRunning = true;
+        initGridVector();
+        display(width, height);
     }
 
-    Cell* getCellAt(sf::Vector2<int> position) {
-        if (!bounds(position)) {
-            throw std::out_of_range("Grid::at out of limits");
-        }
-        return gridVector[position.y][position.x];
-    }
 
-    bool bounds(sf::Vector2<int> position) {
-        return position.x >= 0 && position.x < cols && position.y >= 0 && position.y < rows;
-    }
-
-    void setCellAt(sf::Vector2<int> position, Entity* entity) {
-        if (!bounds(position)) {
-            std::cout << "Grid::clearCellAt out of limits" << std::endl;
-            return;
-        }
-
-        gridVector[position.y][position.x]->setContent(entity);
-
-        if (entity)
-        {
-            entity->setPosition(position); // Update entity pos
-        } 
-    }
-
-    Entity* clearCellAt(sf::Vector2<int> position) {
-        if (!bounds(position)) {
-            std::cout << "Grid::clearCellAt out of limits" << std::endl;
-            return nullptr;
-
-        }
-        return gridVector[position.y][position.x]->clearContent();
-    }
-  
+    //* UI
+    //* -----------------------------------------------------------------------------------------------
     void display(int gWidth, int gHeight) {
         sf::RenderWindow window(sf::VideoMode(sf::Vector2u(gWidth, gHeight)), "Cellular Automata");
 
@@ -107,11 +73,65 @@ public:
         }
     }
 
+
+
+    //* Technical methods
+    //* -----------------------------------------------------------------------------------------------
+    void initGridVector() {
+        for (int row = 0; row < rows; row++) {
+            std::vector<Cell*> cellVec;
+            for (int col = 0; col < cols; col++) {
+                cellVec.push_back(new Cell(col, row));
+            }
+            gridVector.push_back(cellVec);
+        }
+    }
+
+    bool bounds(sf::Vector2<int> position) {
+        return position.x >= 0 && position.x < cols && position.y >= 0 && position.y < rows;
+    }
+
+    Entity* clearCellAt(sf::Vector2<int> position) {
+        if (!bounds(position)) {
+            std::cout << "Grid::clearCellAt out of limits" << std::endl;
+            return nullptr;
+
+        }
+        return gridVector[position.y][position.x]->clearContent();
+    }
+
     void moveCellToPosition(sf::Vector2<int> cellAtPos, sf::Vector2<int> newPos) {
         Entity* entity = clearCellAt(cellAtPos);
         setCellAt(newPos, entity); // Update entity pos
     }
+
+    //* Getters and Setters
+    //* -----------------------------------------------------------------------------------------------
+
+
+    //& Cell
+    Cell* getCellAt(sf::Vector2<int> position) {
+        if (!bounds(position)) {
+            throw std::out_of_range("Grid::at out of limits");
+        }
+        return gridVector[position.y][position.x];
+    }
+
+    void setCellAt(sf::Vector2<int> position, Entity* entity) {
+        if (!bounds(position)) {
+            std::cout << "Grid::clearCellAt out of limits" << std::endl;
+            return;
+        }
+
+        gridVector[position.y][position.x]->setContent(entity);
+
+        if (entity)
+        {
+            entity->setPosition(position); // Update entity pos
+        } 
+    }
   
+    //& Grid
     void setWidth(int gWidth) {
         this->width = gWidth;
     }
@@ -120,22 +140,16 @@ public:
         this->height = gHeight;
     }
 
-    int32_t getWidth() const {
-        return width;
+    //& Row and Cols
+    int32_t getRows() const {
+        return rows;
     }
 
-    int32_t getHeight() const {
-        return height;
+    int32_t getCols() const {
+        return cols;
     }
 
-    void run() {
-        std::cout << "Grid is running" << std::endl;
-        isRunning = true;
-        initGridVector();
-        display(width, height);
-    }
-
-    // DEBUG
+    //* DEBUG
     friend std::ostream& operator<<(std::ostream& os, const Grid& grid) {
         for (std::size_t y = 0; y < grid.rows; ++y) {
             for (std::size_t x = 0; x < grid.cols; ++x) {

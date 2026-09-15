@@ -17,7 +17,6 @@ int main()
 {
     // Engine Test
     Grid* grid = new Grid(WINDOW_WIDTH, WINDOW_HEIGHT);
-    grid->initGridVector();
     
     Herbivore* H1 = new Herbivore("Herbivore1");
     grid->setCellAt({0, 0}, H1);
