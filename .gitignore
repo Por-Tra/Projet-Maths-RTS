@@ -67,3 +67,4 @@ CMakeUserPresets.json
 out/
 run.sh
 COMMAND
+simulation_data.csv
