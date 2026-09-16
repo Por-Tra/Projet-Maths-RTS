@@ -11,8 +11,8 @@
     #define EXPORT_API extern "C" __attribute__((visibility("default")))
 #endif
 
-const int WINDOW_WIDTH = 1000;
-const int WINDOW_HEIGHT = 1000;
+const int WINDOW_WIDTH = 10000;
+const int WINDOW_HEIGHT = 10000;
 
 int main()
 {
@@ -35,7 +35,7 @@ int main()
         // On écrit l'en-tête une fois pour toutes
         file << "Time,HerbivoreCount\n";
 
-        while (t < 10000) {
+        while (t < 100000) {
             H1->move(*grid);
             H2->move(*grid);
 

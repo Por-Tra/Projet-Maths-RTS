@@ -68,3 +68,4 @@ out/
 run.sh
 COMMAND
 simulation_data.csv
+data_plot.png
