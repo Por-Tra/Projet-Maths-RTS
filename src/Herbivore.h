@@ -7,7 +7,9 @@
 
 class Herbivore : public Entity {
 
-    
+int age = 0; // Default age of the herbivore. = baby herbivore
+bool canReproduce = true; // Default reproduction status of the herbivore.
+int coolingDownTime = 30; // Default cooling down time of the herbivore.
 
 public:
     explicit Herbivore(const std::string& name)
@@ -23,10 +25,22 @@ public:
     void update() override
     {
         // Comportement spécifique à Herbivore
+        if (canReproduce == false) {
+            coolingDownTime--;
+        }
+        if (coolingDownTime <= 0) {
+            canReproduce = true;
+            coolingDownTime = 30; // Reset cooldown
+        }
+
+        age++;
     }
 
     void reproduce(Grid& grid) override
     {
+
+        int attempt = 3;
+
         std::vector<sf::Vector2<int>> directions = {
             {0, -1}, {0, 1}, {-1, 0}, {1, 0}
         };
@@ -41,9 +55,19 @@ public:
                 
             Entity* adjacentEntity = grid.getCellAt(adjacentPosition)->getContent();
 
-            if (adjacentEntity && dynamic_cast<Herbivore*>(adjacentEntity)) // if found another Herbivore
+            if (adjacentEntity && dynamic_cast<Herbivore*>(adjacentEntity) && dynamic_cast<Herbivore*>(adjacentEntity)->getAge() >= 30 && attempt >= 0) // if found another Herbivore and it is mature 
             { 
-                
+                attempt--;
+
+                // Check variables
+                if (!canReproduce || !dynamic_cast<Herbivore*>(adjacentEntity)->canReproduce) {
+                    return; // One of the herbivores is not ready to reproduce
+                }
+
+                if (attempt < 0) {
+                    return; // No more attempts left
+                }
+
                 std::vector<sf::Vector2<int>> emptyCells;
 
                 // Find empty cells in the grid
@@ -67,6 +91,10 @@ public:
 
                     Herbivore* newHerbivore = new Herbivore("New Herbivore");
                     grid.setCellAt(selectedPosition, newHerbivore);
+
+                    // Reset the reproduction status of both herbivores
+                    canReproduce = false;
+                    dynamic_cast<Herbivore*>(adjacentEntity)->canReproduce = false;
                 }
                 return; // Stop loop
             }
@@ -91,6 +119,14 @@ public:
         }
 
         return position; //invalid position, no valid move found
+    }
+
+    int getAge() const {
+        return age;
+    }
+
+    void setAge(int newAge) {
+        age = newAge;
     }
 
 };
