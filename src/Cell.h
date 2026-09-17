@@ -1,75 +1,49 @@
 #ifndef CELL_H
 #define CELL_H
 
-#include <SFML/Graphics.hpp>
-#include "Entity.h"
+#include <SFML/System/Vector2.hpp>
 
-class Cell {
-    Entity* cell_content = nullptr;
+class Entity;
 
-    std::int32_t xCell; // colonne (
-    std::int32_t yCell; // ligne
+//* Cellule allegee.
+//* Avant : chaque Cell embarquait un sf::RectangleShape (~250 octets, un sf::Transform,
+//* une matrice, etc.) et etait allouee individuellement avec `new`. Pour une grille
+//* 33x33 ca fait 1089 allocations + 1089 formes redessinees une par une chaque frame.
+//* Maintenant une Cell = un pointeur + deux entiers (16 octets), stockee PAR VALEUR
+//* dans un seul vecteur contigu.
+class Cell
+{
+    Entity* cell_content = nullptr; // observateur : la Grid est proprietaire des entites
+    sf::Vector2i coordinates{0, 0};
 
 public:
     static constexpr float CELL_SIZE = 30.f;
 
-    sf::RectangleShape cell;
-
-    Cell(int xPos, int yPos, Entity* cell_content = nullptr) {
-        this->xCell = xPos;
-        this->yCell = yPos;
-        this->cell_content = cell_content;
-
-        // Creating visual
-        this->cell = sf::RectangleShape(sf::Vector2f(CELL_SIZE, CELL_SIZE));
-        this->cell.setFillColor(sf::Color::White);
-        this->cell.setOutlineColor(sf::Color::Black);
-        this->cell.setOutlineThickness(1.f);
-
-        this->cell.setPosition(sf::Vector2f(xCell * CELL_SIZE, yCell * CELL_SIZE));
-    }
-
-    // ---- Display Related Methods ----
-
-    void setPosition(int xPos, int yPos) {
-        xCell = xPos;
-        yCell = yPos;
-
-        cell.setPosition(sf::Vector2f(xCell * CELL_SIZE, yCell * CELL_SIZE));
-    }
-
-    int32_t getX() {
-        return xCell;
-    }
-
-    int32_t getY() {
-        return yCell;
-    }
-
-    // ---- Content Related Methods ----
-
-    bool isEmpty() const
+    Cell() = default;
+    Cell(int xPos, int yPos)
+        : coordinates{xPos, yPos}
     {
-        return cell_content == nullptr;
     }
 
-    Entity* clearContent()
+    // ---- Coordonnees ----
+
+    int getX() const noexcept { return coordinates.x; }
+    int getY() const noexcept { return coordinates.y; }
+    sf::Vector2i getCoordinates() const noexcept { return coordinates; }
+
+    // ---- Contenu ----
+
+    bool isEmpty() const noexcept { return cell_content == nullptr; }
+
+    Entity* getContent() const noexcept { return cell_content; }
+
+    void setContent(Entity* entity) noexcept { cell_content = entity; }
+
+    Entity* clearContent() noexcept
     {
         Entity* entity = cell_content;
         cell_content = nullptr;
-
         return entity;
-    }
-
-    //* Setter / getter
-
-    void setContent(Entity* entity)
-    {
-        cell_content = entity;
-    }
-
-    Entity* getContent() {
-        return cell_content;
     }
 };
 
