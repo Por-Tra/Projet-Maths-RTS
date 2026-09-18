@@ -17,39 +17,23 @@
 #include "Entity.h"
 #include "Random.h"
 
-//* La Grid est le MODELE de simulation. Elle n'ouvre plus de fenetre et ne dessine
-//* plus rien : voir Renderer.h et Application.h.
-//*
-//* Deux structures complementaires :
-//*   - `cells`    : index spatial "qui est ou ?" -> acces O(1) par coordonnees
-//*   - `entities` : liste des etres vivants      -> iteration O(N) par tick
-//*
-//* C'est ce qui remplace ton double for sur toute la grille. Avec 33x33 = 1089 cases
-//* et 10 herbivores, l'ancienne boucle faisait 1089 iterations pour 10 entites utiles :
-//* 99 % du travail etait du vide. Maintenant on itere sur les 10.
+
 class Grid
 {
-    int cols{0}; // nombre de colonnes = x
-    int rows{0}; // nombre de lignes   = y
+    int cols{0};
+    int rows{0};
 
-    //* Vecteur PLAT, indexe par y * cols + x.
-    //* Avant : std::vector<std::vector<Cell*>> = 1 + rows allocations, memoire eparpillee,
-    //* deux dereferencements de pointeur par acces, et un `delete` manuel par cellule.
-    //* Maintenant : une seule allocation contigue, tres favorable au cache CPU, et zero delete.
     std::vector<Cell> cells;
-
-    //* La grille est PROPRIETAIRE des entites (unique_ptr = liberation automatique).
-    //* Avant, les `new Herbivore` n'etaient jamais liberes : fuite memoire a chaque naissance.
     std::vector<std::unique_ptr<Entity>> entities;
 
-    std::size_t index(sf::Vector2i position) const noexcept
+    [[nodiscard]] std::size_t index(sf::Vector2i position) const noexcept
     {
         return static_cast<std::size_t>(position.y) * static_cast<std::size_t>(cols)
              + static_cast<std::size_t>(position.x);
     }
 
 public:
-    //* Voisinage de von Neumann (4 directions). Partage par toutes les entites.
+    //* Von Neumann Neighborhood (4 directions). Shared with all entities.
     static const std::array<sf::Vector2i, 4>& neighbourhood()
     {
         static const std::array<sf::Vector2i, 4> directions{{
@@ -65,13 +49,9 @@ public:
     {
         if (cols <= 0 || rows <= 0)
         {
-            throw std::invalid_argument("Grid: dimensions trop petites pour une seule cellule");
+            throw std::invalid_argument("Grid: size too short for a single cell");
         }
 
-        //* Initialisation UNE SEULE FOIS, dans le constructeur.
-        //* Ton bug : le constructeur appelait initGridVector(), puis run() le rappelait,
-        //* ce qui empilait une deuxieme grille de lignes a la suite de la premiere
-        //* (gridVector faisait 2 * rows lignes, dont la moitie invisible et fuitee).
         cells.reserve(static_cast<std::size_t>(cols) * static_cast<std::size_t>(rows));
         for (int y = 0; y < rows; ++y)
         {
@@ -267,8 +247,7 @@ public:
 };
 
 //! Dont touch pls
-inline void Entity::move(Grid& grid)
-{
+inline void Entity::move(Grid& grid) const {
     const sf::Vector2i target = chooseDirection(grid);
     if (target != position && grid.bounds(target))
     {

@@ -9,10 +9,10 @@
 
 namespace
 {
-    constexpr int WINDOW_WIDTH = 10000;
-    constexpr int WINDOW_HEIGHT = 10000;
+    constexpr int WINDOW_WIDTH = 5000;
+    constexpr int WINDOW_HEIGHT = 5000;
     constexpr int INITIAL_HERBIVORES = 100;
-    constexpr float TICKS_PER_SECOND = 75.f;
+    constexpr float TICKS_PER_SECOND = 150.f;
 
     void seedPopulation(Grid& grid, int count)
     {

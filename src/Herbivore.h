@@ -12,11 +12,11 @@ class Herbivore : public Entity
 public:
     static constexpr int MATURITY_AGE = 30;
     static constexpr int REPRODUCTION_COOLDOWN = 30;
-    static constexpr int MAX_AGE = 300; // meurt de vieillesse, sinon la population explose
+    static constexpr int MAX_AGE = 300; // too old -> dies
 
 private:
     int age = 0;
-    int cooldown = 0; // 0 = pret a se reproduire
+    int cooldown = 0; // 0 = ready to reproduce
 
 public:
     explicit Herbivore(std::string entityName = "Herbivore")

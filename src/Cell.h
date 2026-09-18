@@ -5,19 +5,18 @@
 
 class Entity;
 
-//* Cellule allegee.
-//* Avant : chaque Cell embarquait un sf::RectangleShape (~250 octets, un sf::Transform,
-//* une matrice, etc.) et etait allouee individuellement avec `new`. Pour une grille
-//* 33x33 ca fait 1089 allocations + 1089 formes redessinees une par une chaque frame.
-//* Maintenant une Cell = un pointeur + deux entiers (16 octets), stockee PAR VALEUR
-//* dans un seul vecteur contigu.
+/*
+ * Class handles a single cell of the grid, stores it's coordinate and entity stored
+ */
+
+
 class Cell
 {
-    Entity* cell_content = nullptr; // observateur : la Grid est proprietaire des entites
+    Entity* cell_content = nullptr; // Entity stored in that cell
     sf::Vector2i coordinates{0, 0};
 
 public:
-    static constexpr float CELL_SIZE = 30.f;
+    static constexpr float CELL_SIZE = 30.f; // Visual size of cell
 
     Cell() = default;
     Cell(int xPos, int yPos)
@@ -25,13 +24,13 @@ public:
     {
     }
 
-    // ---- Coordonnees ----
+    // ---- Coordinate Management ----
 
     int getX() const noexcept { return coordinates.x; }
     int getY() const noexcept { return coordinates.y; }
     sf::Vector2i getCoordinates() const noexcept { return coordinates; }
 
-    // ---- Contenu ----
+    // ---- Content Management ----
 
     bool isEmpty() const noexcept { return cell_content == nullptr; }
 

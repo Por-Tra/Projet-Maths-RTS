@@ -7,24 +7,20 @@
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/System/Vector2.hpp>
 
-//! Dont remove pls
 class Grid; // Forward declaration of Grid class
 
-//* Type d'entite. Sert a remplacer les dynamic_cast dans les boucles chaudes :
-//* un dynamic_cast fait une recherche dans la table RTTI, un enum est une comparaison d'entier.
-//* Garder dynamic_cast pour du code froid (debug, outils), pas pour la simulation.
-enum class Species
+enum class Species // Species of Entity (use this enum to compare an entity type)
 {
     Herbivore,
     Carnivore,
     Plant
 };
 
-//* Classe abstraite de base.
-//* Elle ne contient PLUS de sf::CircleShape : le modele de simulation ne doit rien
-//* savoir du rendu. C'est le Renderer qui dessine, a partir de position() et color().
-//* Gain : ~250 octets economises par entite, et on peut faire tourner la simulation
-//* sans fenetre (mode headless pour generer le CSV).
+/*
+ * Entity is an abstract class used to create each single species (Herbivore, Carnivore...)
+ * Each entity has a name, a position, and if its alive
+ */
+
 class Entity
 {
 protected:
@@ -45,21 +41,19 @@ public:
 
     virtual ~Entity() = default;
 
-    // Une entite vit a une seule place dans la grille : la copier n'a pas de sens.
     Entity(const Entity&) = delete;
     Entity& operator=(const Entity&) = delete;
 
-    const std::string& getName() const noexcept { return name; }
-    sf::Vector2i getPosition() const noexcept { return position; }
+    [[nodiscard]] const std::string& getName() const noexcept { return name; }
+    [[nodiscard]] sf::Vector2i getPosition() const noexcept { return position; }
 
-    bool isAlive() const noexcept { return alive; }
+    [[nodiscard]] bool isAlive() const noexcept { return alive; }
     void kill() noexcept { alive = false; }
 
-    //* Pour le rendu et les statistiques
-    virtual Species species() const noexcept = 0;
-    virtual sf::Color color() const noexcept = 0;
+    [[nodiscard]] virtual Species species() const noexcept = 0;
+    [[nodiscard]] virtual sf::Color color() const noexcept = 0;
 
-    void move(Grid& grid);
+    void move(Grid& grid) const;
 
     virtual void reproduce(Grid& grid) = 0;
 

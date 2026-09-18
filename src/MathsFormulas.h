@@ -3,7 +3,7 @@
 
 #include <cmath>
 
-// MathsFormulas contains mathematical formulas used to verify if simulation is mathematically right
+// MathsFormulas contains mathematical formulas used to verify if simulation is mathematically correct
 // Usage: MathsFormulas::exp_population_without_mortality(...)
 
 class MathsFormulas {
