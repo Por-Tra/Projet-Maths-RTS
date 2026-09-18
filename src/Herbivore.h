@@ -1,135 +1,87 @@
 #ifndef HERBIVORE_H
 #define HERBIVORE_H
 
+#include <string>
+
 #include "Entity.h"
 #include "Grid.h"
-#include <random>
+#include "Random.h"
 
-class Herbivore : public Entity {
+class Herbivore : public Entity
+{
+public:
+    static constexpr int MATURITY_AGE = 30;
+    static constexpr int REPRODUCTION_COOLDOWN = 30;
+    static constexpr int MAX_AGE = 300; // too old -> dies
 
-int age = 0; // Default age of the herbivore. = baby herbivore
-bool canReproduce = true; // Default reproduction status of the herbivore.
-int coolingDownTime = 30; // Default cooling down time of the herbivore.
+private:
+    int age = 0;
+    int cooldown = 0; // 0 = ready to reproduce
 
 public:
-    explicit Herbivore(const std::string& name)
-        : Entity(name)
+    explicit Herbivore(std::string entityName = "Herbivore")
+        : Entity(std::move(entityName))
     {
     }
 
-    explicit Herbivore()
-        : Entity() {
+    //* ---- Rendering ----
 
+    Species species() const noexcept override { return Species::Herbivore; }
+
+    sf::Color color() const noexcept override
+    {
+        // The newer entity are clearer
+        return isMature() ? sf::Color(200, 60, 60) : sf::Color(240, 160, 160);
     }
+
+    //* ---- State ----
+
+    int getAge() const noexcept { return age; }
+    void setAge(int newAge) noexcept { age = newAge; }
+
+    bool isMature() const noexcept { return age >= MATURITY_AGE; }
+    bool canReproduce() const noexcept { return isMature() && cooldown == 0; }
 
     void update() override
     {
-        // Comportement spécifique à Herbivore
-        if (canReproduce == false) {
-            coolingDownTime--;
-        }
-        if (coolingDownTime <= 0) {
-            canReproduce = true;
-            coolingDownTime = 30; // Reset cooldown
-        }
-
-        age++;
+        ++age;
+        if (cooldown > 0) --cooldown;
+        if (age >= MAX_AGE) kill();
     }
 
+    //* ---- Reproducing ----
     void reproduce(Grid& grid) override
     {
+        if (!canReproduce()) return;
 
-        int attempt = 3;
+        for (const sf::Vector2i& direction : Grid::neighbourhood())
+        {
+            Entity* neighbour = grid.entityAt(position + direction);
 
-        std::vector<sf::Vector2<int>> directions = {
-            {0, -1}, {0, 1}, {-1, 0}, {1, 0}
-        };
+            // Test enum d'abord : on n'appelle static_cast que si c'est bien un herbivore.
+            if (neighbour == nullptr || neighbour->species() != Species::Herbivore) continue;
 
-        for (const auto& dir : directions) {
-            sf::Vector2<int> adjacentPosition = position + dir;
+            Herbivore* partner = static_cast<Herbivore*>(neighbour);
+            if (!partner->canReproduce()) continue;
 
-            if (!grid.bounds(adjacentPosition))
+            const std::optional<sf::Vector2i> cradle = grid.randomFreeNeighbour(position);
+            if (!cradle) return; // pas de place autour : ce sera pour un autre tour
+
+            if (grid.spawn<Herbivore>(*cradle, name + " Jr") != nullptr)
             {
-                continue;
+                cooldown = REPRODUCTION_COOLDOWN;
+                partner->cooldown = REPRODUCTION_COOLDOWN;
             }
-                
-            Entity* adjacentEntity = grid.getCellAt(adjacentPosition)->getContent();
-
-            if (adjacentEntity && dynamic_cast<Herbivore*>(adjacentEntity) && dynamic_cast<Herbivore*>(adjacentEntity)->getAge() >= 30 && attempt >= 0) // if found another Herbivore and it is mature 
-            { 
-                attempt--;
-
-                // Check variables
-                if (!canReproduce || !dynamic_cast<Herbivore*>(adjacentEntity)->canReproduce) {
-                    return; // One of the herbivores is not ready to reproduce
-                }
-
-                if (attempt < 0) {
-                    return; // No more attempts left
-                }
-
-                std::vector<sf::Vector2<int>> emptyCells;
-
-                // Find empty cells in the grid
-                for (int32_t y = 0; y < grid.getRows(); ++y) 
-                {
-                    for (int32_t x = 0; x < grid.getCols(); ++x)
-                    {
-                        sf::Vector2<int> pos{x, y};
-                        if (grid.getCellAt(pos)->isEmpty()) {
-                            emptyCells.push_back(pos);
-                        }
-                    }
-                }
-
-                if (!emptyCells.empty()) 
-                {
-                    std::random_device rd;
-                    std::mt19937 gen(rd());
-                    std::uniform_int_distribution<> dis(0, emptyCells.size() - 1);
-                    sf::Vector2<int> selectedPosition = emptyCells[dis(gen)];
-
-                    Herbivore* newHerbivore = new Herbivore("New Herbivore");
-                    grid.setCellAt(selectedPosition, newHerbivore);
-
-                    // Reset the reproduction status of both herbivores
-                    canReproduce = false;
-                    dynamic_cast<Herbivore*>(adjacentEntity)->canReproduce = false;
-                }
-                return; // Stop loop
-            }
+            return;
         }
     }
 
-    sf::Vector2<int> chooseDirection(Grid& grid) const override
+protected:
+    sf::Vector2i chooseDirection(Grid& grid) const override
     {
-        std::vector<sf::Vector2<int>> directions = {
-            {0, -1}, {0, 1}, {-1, 0}, {1, 0}
-        };
-
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::shuffle(directions.begin(), directions.end(), gen);
-
-        for (const auto& dir : directions) {
-            sf::Vector2<int> newPosition = position + dir;
-            if (grid.bounds(newPosition) && grid.getCellAt(newPosition)->isEmpty()) {
-                return newPosition;
-            }
-        }
-
-        return position; //invalid position, no valid move found
+        const std::optional<sf::Vector2i> target = grid.randomFreeNeighbour(position);
+        return target.value_or(position); // aucune case libre -> on reste sur place
     }
-
-    int getAge() const {
-        return age;
-    }
-
-    void setAge(int newAge) {
-        age = newAge;
-    }
-
 };
-
 
 #endif // HERBIVORE_H
