@@ -16,7 +16,7 @@
 inline void writeCsvHeader(std::ofstream& file)
 {
     file << "Time,HerbivoreCount\n";
-}
+}gi
 
 //* Comptage en O(nombre d'entites) au lieu de O(cols * rows) avec un dynamic_cast
 //* sur chaque case occupee.
