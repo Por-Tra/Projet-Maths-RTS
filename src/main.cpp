@@ -34,9 +34,7 @@ namespace
         }
     }
 
-    //* Mode sans fenetre : utile pour produire le CSV vite et comparer aux
-    //* formules de MathsFormulas.h. Possible uniquement parce que la simulation
-    //* ne depend plus du rendu.
+    //* CSV Mode
     void runHeadless(Grid& grid, int steps)
     {
         std::ofstream file("simulation_data.csv"); // ouvre en mode troncature : pas besoin de std::remove

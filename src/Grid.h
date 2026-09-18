@@ -17,7 +17,6 @@
 #include "Entity.h"
 #include "Random.h"
 
-
 class Grid
 {
     int cols{0};
@@ -62,12 +61,10 @@ public:
         }
     }
 
-    // unique_ptr gere tout : pas de destructeur manuel, pas de fuite, pas de double free.
     Grid(const Grid&) = delete;
     Grid& operator=(const Grid&) = delete;
 
-    //* Dimensions
-    //* -----------------------------------------------------------------------------------------------
+    //* ---- Dimensions ----
 
     int getCols() const noexcept { return cols; }
     int getRows() const noexcept { return rows; }
@@ -81,11 +78,8 @@ public:
             && position.y >= 0 && position.y < rows;
     }
 
-    //* Acces aux cases
-    //* -----------------------------------------------------------------------------------------------
+    // ---- Cells Management ----
 
-    //! getCellAt renvoie maintenant une REFERENCE, plus un pointeur.
-    //! Migration : `grid.getCellAt(p)->isEmpty()` devient `grid.getCellAt(p).isEmpty()`
     Cell& getCellAt(sf::Vector2i position)
     {
         if (!bounds(position)) throw std::out_of_range("Grid::getCellAt out of limits");
@@ -98,24 +92,18 @@ public:
         return cells[index(position)];
     }
 
-    // Version sans exception, pratique dans les boucles : renvoie nullptr hors limites.
     Entity* entityAt(sf::Vector2i position) const noexcept
     {
         return bounds(position) ? cells[index(position)].getContent() : nullptr;
     }
 
-    // "Libre" = dans la grille ET vide. Les deux tests d'un coup, c'est ce qu'on veut 99 % du temps.
     bool isFree(sf::Vector2i position) const noexcept
     {
         return bounds(position) && cells[index(position)].isEmpty();
     }
 
-    //* Naissances / deplacements / morts
-    //* -----------------------------------------------------------------------------------------------
+    //* Birth / Movement / Death
 
-    //* Fabrique + place + prend possession de l'entite, en une seule operation.
-    //* Exemple : grid.spawn<Herbivore>({10, 10}, "Bunny");
-    //* Renvoie nullptr si la case est occupee ou hors grille.
     template <typename T, typename... Args>
     T* spawn(sf::Vector2i position, Args&&... args)
     {
@@ -136,9 +124,6 @@ public:
         if (entity) entity->setPosition(position);
     }
 
-    //* Ancien moveCellToPosition : il ecrasait sans verifier. Si la case d'arrivee
-    //* etait occupee, l'entite qui s'y trouvait disparaissait de la grille tout en
-    //* restant vivante -> fuite + entite fantome. Ici on refuse le deplacement.
     void moveEntity(sf::Vector2i from, sf::Vector2i to)
     {
         if (from == to) return;
@@ -148,11 +133,8 @@ public:
         placeAt(to, entity);
     }
 
-    //* Une case libre au hasard parmi les 4 voisines, sans allocation.
-    //* Avant, reproduce() parcourait TOUTE la grille pour construire un std::vector
-    //* de cases vides, a chaque naissance : O(cols * rows) + une allocation dynamique.
-    //* Ici c'est O(4) sur la pile.
-    std::optional<sf::Vector2i> randomFreeNeighbour(sf::Vector2i origin) const
+
+    [[nodiscard]] std::optional<sf::Vector2i> randomFreeNeighbour(sf::Vector2i origin) const
     {
         std::array<sf::Vector2i, 4> freeCells{};
         int count = 0;
@@ -167,17 +149,11 @@ public:
         return freeCells[static_cast<std::size_t>(Random::inRange(0, count - 1))];
     }
 
-    //* Un tour de simulation
-    //* -----------------------------------------------------------------------------------------------
     void step()
     {
-        //* On fige le nombre d'entites AVANT la boucle : les bebes nes pendant ce tick
-        //* sont ajoutes a la fin du vecteur et n'agiront qu'au tick suivant.
-        //*
-        //* Bonus, et c'est important : avec l'ancien double for, une entite qui se
-        //* deplacait vers le bas ou la droite etait revisitee dans le MEME tick et
-        //* jouait son tour plusieurs fois. Ici chaque entite a un index stable :
-        //* exactement un update/move/reproduce par tick, quoi qu'elle fasse.
+        // Froze the number of entities before the loop:
+        // Babies will be added at the of the vector and will act
+
         const std::size_t actorCount = entities.size();
 
         for (std::size_t i = 0; i < actorCount; ++i)
@@ -193,7 +169,7 @@ public:
         collectDead();
     }
 
-    //* Retire les entites mortes de la grille puis du vecteur (une seule passe de compactage).
+    // Remove dead entities
     void collectDead()
     {
         for (const std::unique_ptr<Entity>& entity : entities)
@@ -213,8 +189,7 @@ public:
             entities.end());
     }
 
-    //* Statistiques
-    //* -----------------------------------------------------------------------------------------------
+    //* ---- Stats ----
 
     std::size_t population() const noexcept { return entities.size(); }
 
@@ -227,13 +202,11 @@ public:
                           { return entity->species() == species; }));
     }
 
-    // Lecture seule, pour le rendu et les outils.
-    const std::vector<std::unique_ptr<Entity>>& getEntities() const noexcept { return entities; }
+    [[nodiscard]] const std::vector<std::unique_ptr<Entity>>& getEntities() const noexcept { return entities; }
 
     //* DEBUG
     friend std::ostream& operator<<(std::ostream& os, const Grid& grid)
     {
-        // rows/cols sont des int : on boucle en int, plus de warning signed/unsigned.
         for (int y = 0; y < grid.rows; ++y)
         {
             for (int x = 0; x < grid.cols; ++x)

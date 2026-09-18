@@ -4,11 +4,6 @@
 #include <algorithm>
 #include <random>
 
-//* Un SEUL moteur aleatoire pour toute la simulation.
-//* Avant : `std::random_device rd; std::mt19937 gen(rd());` etait recree a chaque
-//* appel de chooseDirection() / reproduce(). Or construire un mt19937 initialise
-//* 2.5 Ko d'etat interne, et random_device peut taper dans le systeme (/dev/urandom).
-//* Fait 60 fois par seconde pour chaque entite, c'est un des plus gros couts du code.
 namespace Random
 {
     inline std::mt19937& engine()

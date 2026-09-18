@@ -24,19 +24,17 @@ public:
     {
     }
 
-    //* Identite / rendu
-    //* -----------------------------------------------------------------------------------------------
+    //* ---- Rendering ----
 
     Species species() const noexcept override { return Species::Herbivore; }
 
     sf::Color color() const noexcept override
     {
-        // Les jeunes sont plus clairs : lisible d'un coup d'oeil a l'ecran.
+        // The newer entity are clearer
         return isMature() ? sf::Color(200, 60, 60) : sf::Color(240, 160, 160);
     }
 
-    //* Etat
-    //* -----------------------------------------------------------------------------------------------
+    //* ---- State ----
 
     int getAge() const noexcept { return age; }
     void setAge(int newAge) noexcept { age = newAge; }
@@ -51,12 +49,7 @@ public:
         if (age >= MAX_AGE) kill();
     }
 
-    //* Reproduction
-    //* -----------------------------------------------------------------------------------------------
-    //* Ancienne version : la variable `attempt` ne servait a rien (jamais < 0 en 4 tours),
-    //* un `return` premature sortait de la boucle des qu'un voisin n'etait pas pret,
-    //* et surtout le bebe pouvait apparaitre N'IMPORTE OU dans la grille apres un scan
-    //* complet de toutes les cases. Ici : partenaire adjacent + bebe adjacent, O(4).
+    //* ---- Reproducing ----
     void reproduce(Grid& grid) override
     {
         if (!canReproduce()) return;
@@ -84,9 +77,6 @@ public:
     }
 
 protected:
-    //* Une seule case libre tiree au sort parmi les voisines.
-    //* Avant : un std::vector de directions alloue + std::shuffle + un mt19937 reseme,
-    //* a chaque entite et a chaque tick.
     sf::Vector2i chooseDirection(Grid& grid) const override
     {
         const std::optional<sf::Vector2i> target = grid.randomFreeNeighbour(position);

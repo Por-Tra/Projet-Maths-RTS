@@ -10,16 +10,6 @@
 #include "Entity.h"
 #include "Grid.h"
 
-//* Tout le dessin est ici. La simulation ne connait pas SFML, le rendu ne modifie
-//* pas la simulation.
-//*
-//* Performance : ton ancienne boucle faisait un window.draw() par cellule, soit
-//* 1089 appels de dessin par frame (chacun = un changement d'etat + un envoi au GPU),
-//* et zero appel pour les entites. Ici tout est empaquete dans des sf::VertexArray :
-//*   - le fond      : 1 draw
-//*   - la grille    : 1 draw (les lignes, construites une fois pour toutes)
-//*   - les entites  : 1 draw (reconstruit chaque frame, O(nombre d'entites))
-//* Soit 3 appels de dessin quelle que soit la taille de la grille.
 class Renderer
 {
     sf::RectangleShape background;
@@ -40,9 +30,6 @@ public:
         window.draw(background);
         window.draw(gridLines);
 
-        //! LE BUG D'AFFICHAGE : dans ton code, cette partie n'existait pas.
-        //! La boucle ne dessinait que cell->cell. Les entites n'etaient JAMAIS
-        //! envoyees a la fenetre, donc invisibles meme si la simulation tournait.
         buildEntityGeometry(grid);
         window.draw(entityTriangles);
     }
@@ -82,11 +69,6 @@ private:
         {
             const sf::Vector2i cell = entity->getPosition();
 
-            //! DEUXIEME BUG D'AFFICHAGE : dans ton Entity::setPosition tu faisais
-            //!     shape.setPosition(sf::Vector2f(newPosition.x, newPosition.y));
-            //! avec des coordonnees de GRILLE (0..32), donc toutes les entites se
-            //! retrouvaient empilees dans le coin haut-gauche sur ~30 pixels.
-            //! Il faut convertir case -> pixels, et centrer dans la case.
             const sf::Vector2f center(
                 (static_cast<float>(cell.x) + 0.5f) * Cell::CELL_SIZE,
                 (static_cast<float>(cell.y) + 0.5f) * Cell::CELL_SIZE);
