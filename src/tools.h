@@ -1,28 +1,20 @@
 #ifndef TOOLS_H
 #define TOOLS_H
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 
+#include "Entity.h"
+#include "Grid.h"
 
-void createCSV(std::ofstream &file, int time, Grid &grid)
+inline void writeCsvHeader(std::ofstream& file)
 {
-    int herbivoreCount = 0;
-
-    for (int row = 0; row < grid.getRows(); ++row) 
-    {
-        for (int col = 0; col < grid.getCols(); ++col) 
-        {
-            Cell* cell = grid.getCellAt({col, row});
-            if (cell && !cell->isEmpty() && dynamic_cast<Herbivore*>(cell->getContent())) 
-            {
-                herbivoreCount++;
-            }
-        }
-    }
-
-    file << time << "," << herbivoreCount << "\n";
+    file << "Time,HerbivoreCount\n";
 }
 
+inline void appendCsvLine(std::ofstream& file, int time, const Grid& grid)
+{
+    file << time << ',' << grid.populationOf(Species::Herbivore) << '\n';
+}
 
 #endif // TOOLS_H

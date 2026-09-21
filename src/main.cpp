@@ -1,73 +1,76 @@
-#include <SFML/Graphics.hpp>
+#include <fstream>
+#include <iostream>
+#include <string>
 
+#include "Application.h"
 #include "Grid.h"
-#include "MathsFormulas.h"
 #include "Herbivore.h"
 #include "tools.h"
 
-#if defined(_MSC_VER) // Compile for Windows
-    #define EXPORT_API extern "C" __declspec(dllexport)
-#else // Compile for Linux / MacOS
-    #define EXPORT_API extern "C" __attribute__((visibility("default")))
-#endif
-
-const int WINDOW_WIDTH = 1000;
-const int WINDOW_HEIGHT = 1000;
-
-int main()
+namespace
 {
-    // delete CSV file if it exists
-    std::remove("simulation_data.csv");
+    constexpr int WINDOW_WIDTH = 5000;
+    constexpr int WINDOW_HEIGHT = 5000;
+    constexpr int INITIAL_HERBIVORES = 100;
+    constexpr float TICKS_PER_SECOND = 150.f;
 
-    // Engine Test
-    Grid* grid = new Grid(WINDOW_WIDTH, WINDOW_HEIGHT);
-    
-    Herbivore* H1 = new Herbivore("Herbivore1");
-    grid->setCellAt({0, 0}, H1);
-    H1->setAge(30);
+    void seedPopulation(Grid& grid, int count)
+    {
+        int placed = 0;
+        int guard = 0;
 
-    Herbivore* H2 = new Herbivore("Herbivore2");
-    grid->setCellAt({5, 0}, H2);
-    H2->setAge(30);
-
-    std::ofstream file("simulation_data.csv");
-    int t = 0;
-
-    if (file.is_open()) {
-        // On écrit l'en-tête une fois pour toutes
-        file << "Time,HerbivoreCount\n";
-
-        while (t < 1000) 
+        while (placed < count && guard < count * 50)
         {
-            
-            for (int row = 0; row < grid->getRows(); ++row) 
-            {
-                for (int col = 0; col < grid->getCols(); ++col) 
-                {
-                    Cell* cell = grid->getCellAt({col, row});
-                    if (cell && !cell->isEmpty()) 
-                    {
-                        Entity* entity = cell->getContent();
-                        entity->update();
-                        entity->move(*grid);
-                        entity->reproduce(*grid);
-                    }
-                }
-            }
+            ++guard;
 
-            // std::cout << *grid << std::endl;
-            createCSV(file, t, *grid);
+            const sf::Vector2i position{Random::inRange(0, grid.getCols() - 1),
+                                        Random::inRange(0, grid.getRows() - 1)};
 
-            t++;
+            Herbivore* herbivore = grid.spawn<Herbivore>(position, "H" + std::to_string(placed));
+            if (herbivore == nullptr) continue; // cell already taken, we continue
+
+            herbivore->setAge(Random::inRange(Herbivore::MATURITY_AGE, Herbivore::MATURITY_AGE + 20));
+            ++placed;
         }
     }
 
+    //* CSV Mode
+    void runHeadless(Grid& grid, int steps)
+    {
+        std::ofstream file("simulation_data.csv"); // ouvre en mode troncature : pas besoin de std::remove
+        if (!file.is_open())
+        {
+            std::cerr << "Impossible d'ouvrir simulation_data.csv\n";
+            return;
+        }
 
+        writeCsvHeader(file);
 
-    // graphic Test
-    // Grid grid2(WINDOW_WIDTH, WINDOW_HEIGHT);
-    // grid2.run();
+        for (int t = 0; t < steps; ++t)
+        {
+            grid.step();
+            appendCsvLine(file, t, grid);
+        }
 
+        std::cout << "CSV ecrit : " << steps << " tours, population finale = "
+                  << grid.population() << '\n';
+    }
+}
+
+int main(int argc, char** argv)
+{
+    Grid grid(WINDOW_WIDTH, WINDOW_HEIGHT);
+    seedPopulation(grid, INITIAL_HERBIVORES);
+
+    // ./main --csv  -> generate CSV without open window
+    if (argc > 1 && std::string(argv[1]) == "--csv")
+    {
+        runHeadless(grid, 1000);
+        return 0;
+    }
+
+    Application app(grid, TICKS_PER_SECOND);
+    app.run();
 
     return 0;
 }
