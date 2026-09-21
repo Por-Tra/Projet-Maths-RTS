@@ -12,21 +12,18 @@ namespace Random
         return gen;
     }
 
-    // Entier uniforme dans [min, max] (bornes incluses)
     inline int inRange(int min, int max)
     {
         std::uniform_int_distribution<int> dist(min, max);
         return dist(engine());
     }
 
-    // Reel uniforme dans [0, 1)
     inline float unit()
     {
         std::uniform_real_distribution<float> dist(0.f, 1.f);
         return dist(engine());
     }
 
-    // Vrai avec une probabilite donnee (0.0 -> jamais, 1.0 -> toujours)
     inline bool chance(float probability)
     {
         return unit() < probability;

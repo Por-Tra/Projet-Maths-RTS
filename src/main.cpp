@@ -27,7 +27,7 @@ namespace
                                         Random::inRange(0, grid.getRows() - 1)};
 
             Herbivore* herbivore = grid.spawn<Herbivore>(position, "H" + std::to_string(placed));
-            if (herbivore == nullptr) continue; // case deja prise, on retente
+            if (herbivore == nullptr) continue; // cell already taken, we continue
 
             herbivore->setAge(Random::inRange(Herbivore::MATURITY_AGE, Herbivore::MATURITY_AGE + 20));
             ++placed;
@@ -62,7 +62,7 @@ int main(int argc, char** argv)
     Grid grid(WINDOW_WIDTH, WINDOW_HEIGHT);
     seedPopulation(grid, INITIAL_HERBIVORES);
 
-    // ./main --csv  -> genere le CSV sans ouvrir de fenetre
+    // ./main --csv  -> generate CSV without open window
     if (argc > 1 && std::string(argv[1]) == "--csv")
     {
         runHeadless(grid, 1000);

@@ -77,7 +77,6 @@ private:
         }
     }
 
-    // Approxime un disque par un eventail de triangles, ajoute au lot commun.
     void appendCircle(sf::Vector2f center, float radius, sf::Color color)
     {
         constexpr float TWO_PI = 6.28318530718f;
