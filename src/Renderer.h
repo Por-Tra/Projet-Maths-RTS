@@ -86,8 +86,7 @@ private:
         for (int i = 1; i <= CIRCLE_SEGMENTS; ++i)
         {
             const float angle = TWO_PI * static_cast<float>(i) / static_cast<float>(CIRCLE_SEGMENTS);
-            const sf::Vector2f current(center.x + radius * std::cos(angle),
-                                       center.y + radius * std::sin(angle));
+            const sf::Vector2f current(center.x + radius * std::cos(angle), center.y + radius * std::sin(angle));
 
             entityTriangles.append(sf::Vertex{center, color});
             entityTriangles.append(sf::Vertex{previous, color});

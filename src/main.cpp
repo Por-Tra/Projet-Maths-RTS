@@ -1,6 +1,5 @@
 #include <fstream>
 #include <iostream>
-#include <string>
 
 #include "Application.h"
 #include "Grid.h"
@@ -23,51 +22,26 @@ namespace
         {
             ++guard;
 
-            const sf::Vector2i position{Random::inRange(0, grid.getCols() - 1),
-                                        Random::inRange(0, grid.getRows() - 1)};
+            const sf::Vector2i position{Random::inRange(0, grid.getCols() - 1), Random::inRange(0, grid.getRows() - 1)};
 
             Herbivore* herbivore = grid.spawn<Herbivore>(position, "H" + std::to_string(placed));
-            if (herbivore == nullptr) continue; // cell already taken, we continue
+            if (herbivore == nullptr)
+            {
+                continue;
+            }
+            
 
             herbivore->setAge(Random::inRange(Herbivore::MATURITY_AGE, Herbivore::MATURITY_AGE + 20));
             ++placed;
+
         }
-    }
-
-    //* CSV Mode
-    void runHeadless(Grid& grid, int steps)
-    {
-        std::ofstream file("simulation_data.csv"); // ouvre en mode troncature : pas besoin de std::remove
-        if (!file.is_open())
-        {
-            std::cerr << "Impossible d'ouvrir simulation_data.csv\n";
-            return;
-        }
-
-        writeCsvHeader(file);
-
-        for (int t = 0; t < steps; ++t)
-        {
-            grid.step();
-            appendCsvLine(file, t, grid);
-        }
-
-        std::cout << "CSV ecrit : " << steps << " tours, population finale = "
-                  << grid.population() << '\n';
     }
 }
 
-int main(int argc, char** argv)
+int main()
 {
     Grid grid(WINDOW_WIDTH, WINDOW_HEIGHT);
     seedPopulation(grid, INITIAL_HERBIVORES);
-
-    // ./main --csv  -> generate CSV without open window
-    if (argc > 1 && std::string(argv[1]) == "--csv")
-    {
-        runHeadless(grid, 1000);
-        return 0;
-    }
 
     Application app(grid, TICKS_PER_SECOND);
     app.run();

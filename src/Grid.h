@@ -24,6 +24,9 @@ class Grid
 
     std::vector<Cell> cells;
     std::vector<std::unique_ptr<Entity>> entities;
+    std::size_t birthCount{0};
+    std::size_t deathCount{0};
+    std::size_t herbivoreCount{0};
 
     [[nodiscard]] std::size_t index(sf::Vector2i position) const noexcept
     {
@@ -36,8 +39,10 @@ public:
     static const std::array<sf::Vector2i, 4>& neighbourhood()
     {
         static const std::array<sf::Vector2i, 4> directions{{
-            sf::Vector2i{0, -1}, sf::Vector2i{0, 1},
-            sf::Vector2i{-1, 0}, sf::Vector2i{1, 0}
+            sf::Vector2i{0, -1}, 
+            sf::Vector2i{0, 1},
+            sf::Vector2i{-1, 0}, 
+            sf::Vector2i{1, 0}
         }};
         return directions;
     }
@@ -74,21 +79,26 @@ public:
 
     bool bounds(sf::Vector2i position) const noexcept
     {
-        return position.x >= 0 && position.x < cols
-            && position.y >= 0 && position.y < rows;
+        return position.x >= 0 && position.x < cols && position.y >= 0 && position.y < rows;
     }
 
     // ---- Cells Management ----
 
     Cell& getCellAt(sf::Vector2i position)
     {
-        if (!bounds(position)) throw std::out_of_range("Grid::getCellAt out of limits");
+        if (!bounds(position))
+        {
+            throw std::out_of_range("Grid::getCellAt out of limits");
+        } 
         return cells[index(position)];
     }
 
     const Cell& getCellAt(sf::Vector2i position) const
     {
-        if (!bounds(position)) throw std::out_of_range("Grid::getCellAt out of limits");
+        if (!bounds(position))
+        {
+            throw std::out_of_range("Grid::getCellAt out of limits");
+        } 
         return cells[index(position)];
     }
 
@@ -103,6 +113,7 @@ public:
     }
 
     //* Birth / Movement / Death
+    // *----------------------------------------------------------------------------
 
     template <typename T, typename... Args>
     T* spawn(sf::Vector2i position, Args&&... args)
@@ -111,6 +122,11 @@ public:
 
         auto owned = std::make_unique<T>(std::forward<Args>(args)...);
         T* raw = owned.get();
+        ++birthCount;
+        if (raw->species() == Species::Herbivore) 
+        {
+            ++herbivoreCount;
+        }
         entities.push_back(std::move(owned));
         placeAt(position, raw);
         return raw;
@@ -176,6 +192,12 @@ public:
         {
             if (entity->isAlive()) continue;
 
+            ++deathCount;
+            if (entity->species() == Species::Herbivore) 
+            {
+                --herbivoreCount;
+            }
+
             const sf::Vector2i position = entity->getPosition();
             if (bounds(position) && cells[index(position)].getContent() == entity.get())
             {
@@ -192,10 +214,14 @@ public:
     //* ---- Stats ----
 
     std::size_t population() const noexcept { return entities.size(); }
+    std::size_t births() const noexcept { return birthCount; }
+    std::size_t deaths() const noexcept { return deathCount; }
+    std::size_t herbivorePopulation() const noexcept { return herbivoreCount; }
 
-    //* O(nombre d'entites) au lieu de O(cols * rows) + un dynamic_cast par case.
     std::size_t populationOf(Species species) const noexcept
     {
+        if (species == Species::Herbivore) return herbivoreCount;
+
         return static_cast<std::size_t>(
             std::count_if(entities.begin(), entities.end(),
                           [species](const std::unique_ptr<Entity>& entity)

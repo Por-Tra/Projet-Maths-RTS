@@ -4,6 +4,10 @@
 #include <algorithm>
 #include <random>
 
+
+//** @brief class for generate random numbers, with a single random engine for the whole project
+
+
 namespace Random
 {
     inline std::mt19937& engine()

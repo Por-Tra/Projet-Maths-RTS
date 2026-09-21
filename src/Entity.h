@@ -7,9 +7,9 @@
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/System/Vector2.hpp>
 
-class Grid; // Forward declaration of Grid class
+class Grid; //& Forward declaration of Grid class
 
-enum class Species // Species of Entity (use this enum to compare an entity type)
+enum class Species //& Species of Entity (use this enum to compare an entity type), faster than using dynamic_cast
 {
     Herbivore,
     Carnivore,
@@ -28,8 +28,6 @@ protected:
     sf::Vector2i position{0, 0};
     bool alive{true};
 
-    //* ATTENTION : malgre son nom, cette methode renvoie la CASE VISEE (coordonnees
-    //* absolues), pas un vecteur direction. Renvoyer sa propre position = "je ne bouge pas".
     virtual sf::Vector2i chooseDirection(Grid& grid) const = 0;
 
 public:

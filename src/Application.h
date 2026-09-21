@@ -1,12 +1,15 @@
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
+#include <fstream>
+#include <iostream>
 #include <string>
 
 #include <SFML/Graphics.hpp>
 
 #include "Grid.h"
 #include "Renderer.h"
+#include "tools.h"
 
 /*
  * Application handle the main loop of the game: event -> simulation -> render
@@ -15,6 +18,8 @@
 
 class Application
 {
+    std::ofstream csvFile{"simulation_data.csv"};
+    int timeStep{0};
     Grid& grid;
     Renderer renderer;
     sf::RenderWindow window;
@@ -25,14 +30,20 @@ class Application
 
 public:
     explicit Application(Grid& simulationGrid, float ticksPerSecond = 10.f, const std::string& title = "Cellular Automata")
-        : grid(simulationGrid),
-          renderer(simulationGrid),
-          window(sf::VideoMode(sf::Vector2u(static_cast<unsigned int>(simulationGrid.pixelWidth()),
-                                            static_cast<unsigned int>(simulationGrid.pixelHeight()))),
-                 title),
+        : grid(simulationGrid), renderer(simulationGrid), window(sf::VideoMode(sf::Vector2u(static_cast<unsigned int>(simulationGrid.pixelWidth()),
+                                            static_cast<unsigned int>(simulationGrid.pixelHeight()))), title),
           tickDuration(sf::seconds(1.f / ticksPerSecond))
     {
         window.setFramerateLimit(60);
+        if (!csvFile.is_open())
+        {
+            std::cerr << "Impossible d'ouvrir simulation_data.csv\n";
+        }
+        else
+        {
+            writeCsvHeader(csvFile);
+            appendCsvLine(csvFile, timeStep, grid);
+        }
     }
 
     void run()
@@ -49,7 +60,11 @@ public:
 
             while (accumulator >= tickDuration)
             {
-                if (!paused) grid.step();
+                if (!paused)
+                {
+                    grid.step();
+                    appendCsvLine(csvFile, ++timeStep, grid);
+                }
                 accumulator -= tickDuration;
             }
 
