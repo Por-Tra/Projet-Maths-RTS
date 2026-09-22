@@ -13,3 +13,7 @@ cmake --build build
 # Path to RTS executable (change if needed)
 build/bin/main # add --csv to generate CSV instead of display
 ```
+
+
+# Architecture du projet
+[![Architecture du projet](./diagram.png)]
