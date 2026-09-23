@@ -1,3 +1,6 @@
+## Lien vers le compte rendu par séance
+https://docs.google.com/document/d/1V6TwwtPyWplslxlLsV6yeguGusbax4Ohi6p5mdXQ9ao/edit?usp=sharing
+
 ## Générer un graphique avec python :
 *Pré-requis: pip et matplotlib (installé avec pip)*  
   
