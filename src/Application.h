@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <string>
 
 #include <SFML/Graphics.hpp>
@@ -11,6 +12,7 @@
 #include "Grid.h"
 #include "Renderer.h"
 #include "tools.h"
+#include "Graph.h"
 
 /*
  * Application handle the main loop of the game: event -> simulation -> render
@@ -19,14 +21,24 @@
 
 class Application
 {
+    enum class Tab // Widget
+    {
+        Simulation,
+        Graph,
+        Empty
+    };
+
     std::ofstream csvFile{"simulation_data.csv"};
     int timeStep{0};
     Grid& grid;
     Renderer renderer;
+    Graph graph{grid, GraphType::ExponentialPopulationWithMortality};
     sf::RenderWindow window;
     sf::View gameView;
     sf::Time tickDuration;
     bool paused = false;
+
+    Tab currentTab{Tab::Simulation};
 
     static constexpr float MAX_FRAME_TIME = 0.25f;
 
@@ -36,7 +48,6 @@ public:
           tickDuration(sf::seconds(1.f / ticksPerSecond))
     {
         configureView(window.getSize());
-        window.setFramerateLimit(60);
         if (!csvFile.is_open())
         {
             std::cerr << "Impossible d'ouvrir simulation_data.csv\n";
@@ -46,6 +57,7 @@ public:
             writeCsvHeader(csvFile);
             appendCsvLine(csvFile, timeStep, grid);
         }
+        graph.update(0.f);
     }
 
     void run()
@@ -66,12 +78,29 @@ public:
                 {
                     grid.step();
                     appendCsvLine(csvFile, ++timeStep, grid);
+                    graph.update(static_cast<float>(timeStep));
                 }
                 accumulator -= tickDuration;
             }
 
             window.clear(sf::Color(30, 30, 35));
-            renderer.draw(window, grid);
+
+            // Widget manager
+            if (currentTab == Tab::Simulation)
+            {
+                window.setView(gameView);
+                renderer.draw(window, grid);
+            }
+            else if (currentTab == Tab::Graph)
+            {
+                graph.draw(window);
+            }
+            else if (currentTab == Tab::Empty)
+            {
+                // Nothing to draw
+            }
+            
+
             window.display();
         }
     }
@@ -135,10 +164,20 @@ private:
                 configureView(resized->size);
             }
 
+            // Only the visible graph receives zoom / auto-fit events.
+            if (currentTab == Tab::Graph) {
+                graph.handleEvent(*event, window);
+            }
+
+            //! Key manager
             if (const auto* key = event->getIf<sf::Event::KeyPressed>())
             {
                 if (key->code == sf::Keyboard::Key::Escape) window.close();
                 if (key->code == sf::Keyboard::Key::Space) paused = !paused;
+                if (key->code == sf::Keyboard::Key::Tab)
+                {
+                    currentTab = (currentTab == Tab::Simulation) ? Tab::Graph : Tab::Simulation;
+                }
             }
         }
     }

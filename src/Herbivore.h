@@ -31,7 +31,7 @@ public:
     sf::Color color() const noexcept override
     {
         // The newer entity are clearer
-        return isMature() ? sf::Color(200, 60, 60) : sf::Color(240, 160, 160);
+        return isMature() ? sf::Color(60, 200, 60) : sf::Color(160, 240, 160);
     }
 
     //* ---- State ----
