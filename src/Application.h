@@ -1,6 +1,7 @@
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -23,17 +24,18 @@ class Application
     Grid& grid;
     Renderer renderer;
     sf::RenderWindow window;
+    sf::View gameView;
     sf::Time tickDuration;
     bool paused = false;
 
     static constexpr float MAX_FRAME_TIME = 0.25f;
 
 public:
-    explicit Application(Grid& simulationGrid, float ticksPerSecond = 10.f, const std::string& title = "Cellular Automata")
-        : grid(simulationGrid), renderer(simulationGrid), window(sf::VideoMode(sf::Vector2u(static_cast<unsigned int>(simulationGrid.pixelWidth()),
-                                            static_cast<unsigned int>(simulationGrid.pixelHeight()))), title),
+    explicit Application(Grid& simulationGrid, float ticksPerSecond = 10.f, const std::string& title = "RTS window")
+        : grid(simulationGrid), renderer(simulationGrid), window(sf::VideoMode(initialWindowSize(simulationGrid)), title),
           tickDuration(sf::seconds(1.f / ticksPerSecond))
     {
+        configureView(window.getSize());
         window.setFramerateLimit(60);
         if (!csvFile.is_open())
         {
@@ -74,7 +76,50 @@ public:
         }
     }
 
+    void setFPSMax(int fps)
+    {
+        window.setFramerateLimit(fps);
+    }
+
 private:
+    static sf::Vector2u initialWindowSize(const Grid& simulationGrid)
+    {
+        const sf::Vector2u desktopSize = sf::VideoMode::getDesktopMode().size;
+        const float availableWidth = static_cast<float>(desktopSize.x) * 0.9f;
+        const float availableHeight = static_cast<float>(desktopSize.y) * 0.9f;
+        const float scale = std::min({1.f, availableWidth / simulationGrid.pixelWidth(),
+                                      availableHeight / simulationGrid.pixelHeight()});
+
+        return sf::Vector2u{
+            std::max(1u, static_cast<unsigned int>(simulationGrid.pixelWidth() * scale)),
+            std::max(1u, static_cast<unsigned int>(simulationGrid.pixelHeight() * scale))};
+    }
+
+    void configureView(sf::Vector2u windowSize)
+    {
+        if (windowSize.x == 0 || windowSize.y == 0) return;
+
+        const float worldRatio = grid.pixelWidth() / grid.pixelHeight();
+        const float windowRatio = static_cast<float>(windowSize.x) / static_cast<float>(windowSize.y);
+        sf::FloatRect viewport({0.f, 0.f}, {1.f, 1.f});
+
+        if (windowRatio > worldRatio)
+        {
+            viewport.size.x = worldRatio / windowRatio;
+            viewport.position.x = (1.f - viewport.size.x) * 0.5f;
+        }
+        else if (windowRatio < worldRatio)
+        {
+            viewport.size.y = windowRatio / worldRatio;
+            viewport.position.y = (1.f - viewport.size.y) * 0.5f;
+        }
+
+        gameView.setSize(sf::Vector2f(grid.pixelWidth(), grid.pixelHeight()));
+        gameView.setCenter(sf::Vector2f(grid.pixelWidth() * 0.5f, grid.pixelHeight() * 0.5f));
+        gameView.setViewport(viewport);
+        window.setView(gameView);
+    }
+
     void handleEvents()
     {
         while (const std::optional<sf::Event> event = window.pollEvent())
@@ -83,6 +128,11 @@ private:
             {
                 window.close();
                 return;
+            }
+
+            if (const auto* resized = event->getIf<sf::Event::Resized>())
+            {
+                configureView(resized->size);
             }
 
             if (const auto* key = event->getIf<sf::Event::KeyPressed>())

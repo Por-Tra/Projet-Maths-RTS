@@ -16,4 +16,4 @@ build/bin/main # add --csv to generate CSV instead of display
 
 
 # Architecture du projet
-[![Architecture du projet](./diagram.png)]
+![Architecture du projet](./asset/diagram.png)

@@ -6,10 +6,10 @@
 #include "Herbivore.h"
 #include "tools.h"
 
-namespace
+namespace //Variables container
 {
-    constexpr int WINDOW_WIDTH = 5000;
-    constexpr int WINDOW_HEIGHT = 5000;
+    constexpr int WINDOW_WIDTH = 50000;
+    constexpr int WINDOW_HEIGHT = 50000;
     constexpr int INITIAL_HERBIVORES = 100;
     constexpr float TICKS_PER_SECOND = 150.f;
 
@@ -44,6 +44,7 @@ int main()
     seedPopulation(grid, INITIAL_HERBIVORES);
 
     Application app(grid, TICKS_PER_SECOND);
+    app.setFPSMax(10); // Optimal
     app.run();
 
     return 0;

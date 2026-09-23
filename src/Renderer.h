@@ -79,7 +79,7 @@ private:
 
     void appendCircle(sf::Vector2f center, float radius, sf::Color color)
     {
-        constexpr float TWO_PI = 6.28318530718f;
+        constexpr float TWO_PI = 6.28318530718f; //! cpp 17, so can't use <numbers>
 
         sf::Vector2f previous(center.x + radius, center.y);
 

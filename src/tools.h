@@ -9,7 +9,7 @@
 
 inline void writeCsvHeader(std::ofstream& file)
 {
-    file << "Time,HerbivoreCount,Births,Deaths,NetScore\n";
+    file << "Time,HerbivoreCount,Total_Births,Total_Deaths,Current_population\n";
 }
 
 inline void appendCsvLine(std::ofstream& file, int time, const Grid& grid)
