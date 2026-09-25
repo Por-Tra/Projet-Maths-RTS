@@ -310,26 +310,32 @@ private:
 public:
     // Optional explicit font path; existing two-argument construction is preserved.
     Graph(Grid& simulationGrid, GraphType graphType, const std::string& fontPath = "")
-        : grid(simulationGrid), type(graphType)
+    : grid(simulationGrid), type(graphType)
     {
+        namespace fs = std::filesystem;
+
         std::vector<std::string> paths;
         if (!fontPath.empty()) paths.push_back(fontPath);
-        if (const char* env = std::getenv("GRAPH_FONT")) paths.emplace_back(env);
+        if (const char* env = std::getenv("GRAPH_FONT"); env && *env) paths.emplace_back(env);
+
         for (const std::string base : {"", "../", "../../"})
             for (const std::string name : {"asset/Lato-Regular.ttf", "assets/Lato-Regular.ttf",
                                            "asset/DejaVuSans.ttf", "asset/Lato-Bold.ttf"})
                 paths.push_back(base + name);
+
         paths.insert(paths.end(), {
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
-            "/usr/share/fonts/TTF/DejaVuSans.ttf",
+            "/usr/share/fonts/TTF/DejaVuSans.ttf",                // Arch
             "C:/Windows/Fonts/segoeui.ttf", "C:/Windows/Fonts/arial.ttf",
             "/System/Library/Fonts/Supplemental/Arial.ttf"});
+
         for (const auto& path : paths)
         {
-            if (std::ifstream(path).good() && font.openFromFile(path))
-            { hasFont = true; break; }
+            std::error_code ec;
+            std::cerr << "[Graph] essai: " << path << std::endl; // <-- ajoute ça
+            if (!fs::is_regular_file(path, ec) || ec) continue; // évite le piège ifstream-sur-dossier
+            if (font.openFromFile(path)) { hasFont = true; break; }
         }
+
         if (!hasFont)
             std::cerr << "[Graph] Police introuvable. Placez Lato-Regular.ttf dans asset/ "
                          "ou indiquez un fichier TTF via GRAPH_FONT ou le constructeur de Graph.\n";

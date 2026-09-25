@@ -27,6 +27,7 @@ class Grid
     std::size_t birthCount{0};
     std::size_t deathCount{0};
     std::size_t herbivoreCount{0};
+    std::size_t carnivoreCount{0};
 
     [[nodiscard]] std::size_t index(sf::Vector2i position) const noexcept
     {
@@ -127,6 +128,11 @@ public:
         {
             ++herbivoreCount;
         }
+
+        if (raw->species() == Species::Carnivore) {
+            ++carnivoreCount;
+        }
+
         entities.push_back(std::move(owned));
         placeAt(position, raw);
         return raw;
