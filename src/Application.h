@@ -25,6 +25,7 @@ class Application
     {
         Simulation,
         Graph,
+        Diagram_phase,
         Empty
     };
 

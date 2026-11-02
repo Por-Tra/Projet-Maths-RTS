@@ -39,7 +39,7 @@ public:
     enum class Color { Background, Axes, Grid, Formula, CurrentPopulation, Text, Muted };
 
 private:
-    // Seule police du projet : asset/Lato-Bold.ttf (aucune police systeme).
+    
     static constexpr const char* FONT_FILE = "Lato-Bold.ttf";
     static constexpr unsigned TICK_SIZE = 11;
 
