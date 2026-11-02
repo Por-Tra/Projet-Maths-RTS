@@ -30,4 +30,15 @@ target_link_libraries(main PRIVATE
     sfml-system
 )
 
+# Seule police du projet : asset/Lato-Bold.ttf (aucune police systeme).
+# 1) Chemin absolu du dossier asset/ integre au binaire (repli pour Graph.h)
+target_compile_definitions(main PRIVATE ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/asset")
+
+# 2) Copie asset/ a cote de l'executable apres chaque build (Linux, Windows, multi-config)
+add_custom_command(TARGET main POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
+            ${CMAKE_CURRENT_SOURCE_DIR}/asset
+            $<TARGET_FILE_DIR:main>/asset
+    COMMENT "Copie des assets vers $<TARGET_FILE_DIR:main>/asset")
+
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT main)
