@@ -14,12 +14,12 @@ public:
 
     // Exponential population, without mortality and no need of eat
     static float exp_population_without_mortality(float population_initiale, float taux_croissance, float temps) {
-        return population_initiale * exp(taux_croissance * temps);
+        return population_initiale * std::exp(taux_croissance * temps);
     }
 
     // Exponential population, with mortality and no need of eat
     static float exp_population_with_mortality(float population_initiale, float taux_croissance, float taux_mortalite, float temps) {
-        return population_initiale * exp((taux_croissance - taux_mortalite) * temps);
+        return population_initiale * std::exp((taux_croissance - taux_mortalite) * temps);
         // return (taux_croissance / population_initiale ) / 1 + (((taux_croissance / population_initiale) - population_initiale) / population_initiale) * exp(-taux_mortalite * temps);
     }
 
@@ -32,7 +32,7 @@ public:
     // The C population represents the predators (e.g. carnivores)
 
     static float lotka_volterra(float population_herbivore, float population_carnivore, float taux_croissance_herbivore, float taux_mortalite_carnivore, float temps) {
-        return population_herbivore * exp(taux_croissance_herbivore * temps) - (population_herbivore * population_carnivore * taux_mortalite_carnivore * temps);
+        return population_herbivore * std::exp(taux_croissance_herbivore * temps) - (population_herbivore * population_carnivore * taux_mortalite_carnivore * temps);
     }
 
     //*--------------------------------------------------------------------------------------
