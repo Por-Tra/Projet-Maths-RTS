@@ -1,16 +1,30 @@
 #ifndef GRAPH_H
 #define GRAPH_H
 
+#if defined(_WIN32)
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
+    #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+    #include <windows.h>
+#elif defined(__APPLE__)
+    #include <mach-o/dyld.h>
+#endif
+
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
-#include <fstream>
+#include <filesystem>
 #include <iomanip>
 #include <iostream>
 #include <limits>
 #include <locale>
 #include <sstream>
 #include <string>
+#include <system_error>
 #include <utility>
 #include <vector>
 #include <SFML/Graphics.hpp>
@@ -22,9 +36,13 @@ enum class GraphType { ExponentialPopulationWithMortality, LotkaVolterra };
 class Graph
 {
 public:
-    enum class Color { Background, Axes, Grid, Formula, CurrentPopulation, Text };
+    enum class Color { Background, Axes, Grid, Formula, CurrentPopulation, Text, Muted };
 
 private:
+    // Seule police du projet : asset/Lato-Bold.ttf (aucune police systeme).
+    static constexpr const char* FONT_FILE = "Lato-Bold.ttf";
+    static constexpr unsigned TICK_SIZE = 11;
+
     Grid& grid;
     GraphType type;
     float initialPopulation{0.f};
@@ -46,16 +64,74 @@ private:
     bool automatic{true};
     Range zoomRange;
 
+    // ---------------------------------------------------------------- police
+    // Dossier de l'executable : permet de retrouver asset/ quel que soit le
+    // repertoire de travail (IDE, terminal, build/, build/Release/...).
+    static std::filesystem::path executableDir()
+    {
+        namespace fs = std::filesystem;
+#if defined(_WIN32)
+        std::wstring buffer(MAX_PATH, L'\0');
+        for (;;)
+        {
+            const DWORD n = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+            if (n == 0) return {};
+            if (n < buffer.size()) { buffer.resize(n); break; }
+            buffer.resize(buffer.size() * 2);
+        }
+        return fs::path(buffer).parent_path();
+#elif defined(__APPLE__)
+        std::uint32_t size = 0;
+        _NSGetExecutablePath(nullptr, &size);
+        std::string buffer(size, '\0');
+        if (_NSGetExecutablePath(buffer.data(), &size) != 0) return {};
+        std::error_code ec;
+        return fs::weakly_canonical(fs::path(buffer.c_str()), ec).parent_path();
+#else
+        std::error_code ec;
+        return fs::read_symlink("/proc/self/exe", ec).parent_path();
+#endif
+    }
+
+    static std::vector<std::filesystem::path> fontCandidates(const std::string& explicitPath)
+    {
+        namespace fs = std::filesystem;
+        std::vector<fs::path> result;
+        if (!explicitPath.empty()) result.emplace_back(explicitPath);
+        if (const char* env = std::getenv("GRAPH_FONT")) result.emplace_back(env);
+#ifdef ASSET_DIR
+        // Defini par CMake : target_compile_definitions(... ASSET_DIR="${CMAKE_SOURCE_DIR}/asset")
+        result.push_back(fs::path(ASSET_DIR) / FONT_FILE);
+#endif
+        std::error_code ec;
+        const fs::path roots[] = {executableDir(), fs::current_path(ec)};
+        for (const fs::path& root : roots)
+        {
+            fs::path dir = root;
+            // On remonte de quelques niveaux : build/Release/app -> racine du projet.
+            for (int depth = 0; depth < 5 && !dir.empty(); ++depth)
+            {
+                result.push_back(dir / "asset" / FONT_FILE);
+                const fs::path parent = dir.parent_path();
+                if (parent == dir) break;
+                dir = parent;
+            }
+        }
+        return result;
+    }
+
+    // ---------------------------------------------------------------- dessin
     sf::Color color(Color value) const noexcept
     {
         switch (value)
         {
-            case Color::Background: return sf::Color(248, 250, 252);
-            case Color::Axes: return sf::Color(125, 137, 151);
-            case Color::Grid: return sf::Color(229, 234, 240);
-            case Color::Formula: return sf::Color(219, 119, 36);
+            case Color::Background:        return sf::Color(248, 250, 252);
+            case Color::Axes:              return sf::Color(170, 180, 192);
+            case Color::Grid:              return sf::Color(234, 238, 244);
+            case Color::Formula:           return sf::Color(219, 119, 36);
             case Color::CurrentPopulation: return sf::Color(38, 108, 184);
-            case Color::Text: return sf::Color(39, 51, 67);
+            case Color::Text:              return sf::Color(51, 65, 85);
+            case Color::Muted:             return sf::Color(120, 132, 148);
         }
         return sf::Color::Black;
     }
@@ -69,7 +145,7 @@ private:
     // Positions refer to the visible glyph bounds, not the font's baseline.
     void text(sf::RenderWindow& window, const std::string& value, unsigned size,
               sf::Vector2f position, float alignX = 0.f, float alignY = 0.f,
-              sf::Color ink = sf::Color(39, 51, 67)) const
+              sf::Color ink = sf::Color(51, 65, 85)) const
     {
         if (!hasFont) return;
         sf::Text label(font, value, size);
@@ -180,14 +256,14 @@ private:
         Layout result;
         result.compact = size.x < 650;
         if (size.x < 360 || size.y < 280) return result;
-        const float top = result.compact ? 126.f : 112.f;
-        const float height = static_cast<float>(size.y) - top - 82.f;
+        const float top = result.compact ? 108.f : 94.f;
+        const float height = static_cast<float>(size.y) - top - 70.f;
         const double step = niceStep(range.y1 - range.y0, std::max(2, static_cast<int>(height / 65.f)));
         float labelWidth = 0.f;
         for (double value : ticks(range.y0, range.y1, step))
-            labelWidth = std::max(labelWidth, textWidth(formatValue(value, step), 12));
-        const float left = std::ceil(std::max(76.f, labelWidth + 43.f));
-        result.plot = sf::FloatRect({left, top}, {static_cast<float>(size.x) - left - 34.f, height});
+            labelWidth = std::max(labelWidth, textWidth(formatValue(value, step), TICK_SIZE));
+        const float left = std::ceil(std::max(70.f, labelWidth + 40.f));
+        result.plot = sf::FloatRect({left, top}, {static_cast<float>(size.x) - left - 30.f, height});
         result.usable = result.plot.size.x >= 100.f && height >= 60.f;
         return result;
     }
@@ -217,7 +293,8 @@ private:
     }
 
     void drawCurve(sf::RenderWindow& window, const std::vector<float>& values,
-                   const sf::FloatRect& plot, const Range& range, sf::Color ink) const
+                   const sf::FloatRect& plot, const Range& range,
+                   sf::Color ink, float thickness) const
     {
         const auto count = std::min(times.size(), values.size());
         auto point = [&](double x, double y) {
@@ -231,9 +308,9 @@ private:
             double x1 = (times[i] - range.x0) / (range.x1-range.x0);
             double y0 = (values[i-1] - range.y0) / (range.y1-range.y0);
             double y1 = (values[i] - range.y0) / (range.y1-range.y0);
-            if (clip(x0, y0, x1, y1)) line(window, point(x0,y0), point(x1,y1), ink, 2.f);
+            if (clip(x0, y0, x1, y1)) line(window, point(x0,y0), point(x1,y1), ink, thickness);
         }
-        if (count && std::isfinite(values.back()))
+        if (count && std::isfinite(values[count-1]))
         {
             const double x = (times[count-1] - range.x0) / (range.x1-range.x0);
             const double y = (values[count-1] - range.y0) / (range.y1-range.y0);
@@ -249,13 +326,13 @@ private:
     void drawGrid(sf::RenderWindow& window, const sf::FloatRect& plot, const Range& range) const
     {
         const float bottom = plot.position.y + plot.size.y;
+        const sf::Color muted = color(Color::Muted);
         const double yStep = niceStep(range.y1-range.y0, std::max(2, static_cast<int>(plot.size.y / 65.f)));
         for (double value : ticks(range.y0, range.y1, yStep))
         {
             const float y = plot.position.y + plot.size.y * static_cast<float>((range.y1-value)/(range.y1-range.y0));
             line(window, {plot.position.x,y}, {plot.position.x+plot.size.x,y}, color(Color::Grid));
-            line(window, {plot.position.x-5.f,y}, {plot.position.x,y}, color(Color::Axes));
-            text(window, formatValue(value,yStep), 12, {plot.position.x-10.f,y}, 1.f, .5f);
+            text(window, formatValue(value,yStep), TICK_SIZE, {plot.position.x-8.f,y}, 1.f, .5f, muted);
         }
         int target = std::max(2, static_cast<int>(plot.size.x / 100.f));
         double xStep = niceStep(range.x1-range.x0, target);
@@ -265,7 +342,7 @@ private:
             xStep = niceStep(range.x1-range.x0, target);
             float widest = 0.f;
             for (double value : ticks(range.x0, range.x1, xStep))
-                widest = std::max(widest, textWidth(formatValue(value,xStep),12));
+                widest = std::max(widest, textWidth(formatValue(value,xStep),TICK_SIZE));
             if (plot.size.x * xStep / (range.x1-range.x0) >= widest + 20.f) break;
         }
         xStep = niceStep(range.x1-range.x0, target);
@@ -273,11 +350,10 @@ private:
         {
             const float x = plot.position.x + plot.size.x * static_cast<float>((value-range.x0)/(range.x1-range.x0));
             line(window, {x,plot.position.y}, {x,bottom}, color(Color::Grid));
-            line(window, {x,bottom}, {x,bottom+5.f}, color(Color::Axes));
             const auto label = formatValue(value,xStep);
-            const float half = textWidth(label,12) * .5f;
-            const float labelX = std::clamp(x, plot.position.x, plot.position.x+plot.size.x+24.f-half);
-            text(window, label, 12, {labelX,bottom+12.f}, .5f);
+            const float half = textWidth(label,TICK_SIZE) * .5f;
+            const float maxX = std::max(plot.position.x, plot.position.x+plot.size.x+24.f-half);
+            text(window, label, TICK_SIZE, {std::clamp(x, plot.position.x, maxX), bottom+10.f}, .5f, 0.f, muted);
         }
     }
 
@@ -308,37 +384,22 @@ private:
     }
 
 public:
-    // Optional explicit font path; existing two-argument construction is preserved.
+    // Chemin explicite optionnel (sinon : GRAPH_FONT, ASSET_DIR, puis asset/Lato-Bold.ttf
+    // recherche depuis l'executable et le repertoire courant).
     Graph(Grid& simulationGrid, GraphType graphType, const std::string& fontPath = "")
     : grid(simulationGrid), type(graphType)
     {
-        namespace fs = std::filesystem;
-
-        std::vector<std::string> paths;
-        if (!fontPath.empty()) paths.push_back(fontPath);
-        if (const char* env = std::getenv("GRAPH_FONT"); env && *env) paths.emplace_back(env);
-
-        for (const std::string base : {"", "../", "../../"})
-            for (const std::string name : {"asset/Lato-Regular.ttf", "assets/Lato-Regular.ttf",
-                                           "asset/DejaVuSans.ttf", "asset/Lato-Bold.ttf"})
-                paths.push_back(base + name);
-
-        paths.insert(paths.end(), {
-            "/usr/share/fonts/TTF/DejaVuSans.ttf",                // Arch
-            "C:/Windows/Fonts/segoeui.ttf", "C:/Windows/Fonts/arial.ttf",
-            "/System/Library/Fonts/Supplemental/Arial.ttf"});
-
-        for (const auto& path : paths)
+        std::error_code ec;
+        for (const auto& path : fontCandidates(fontPath))
         {
-            std::error_code ec;
-            std::cerr << "[Graph] essai: " << path << std::endl; // <-- ajoute ça
-            if (!fs::is_regular_file(path, ec) || ec) continue; // évite le piège ifstream-sur-dossier
-            if (font.openFromFile(path)) { hasFont = true; break; }
+            if (std::filesystem::is_regular_file(path, ec) && font.openFromFile(path))
+            { hasFont = true; break; }
         }
 
         if (!hasFont)
-            std::cerr << "[Graph] Police introuvable. Placez Lato-Regular.ttf dans asset/ "
-                         "ou indiquez un fichier TTF via GRAPH_FONT ou le constructeur de Graph.\n";
+            std::cerr << "[Graph] Police introuvable : asset/" << FONT_FILE << ".\n"
+                         "Lancez le programme depuis le projet, copiez asset/ a cote de "
+                         "l'executable, ou indiquez le fichier via GRAPH_FONT.\n";
     }
 
     void resetZoom() noexcept { automatic = true; }
@@ -416,41 +477,46 @@ public:
         const Layout ui = layout(size,range);
         if (!ui.usable)
         {
-            text(window, "Agrandissez la fenetre", 14, {size.x*.5f,size.y*.5f}, .5f,.5f);
+            text(window, "Agrandissez la fenetre", 14, {size.x*.5f,size.y*.5f}, .5f,.5f, color(Color::Muted));
             window.setView(saved);
             return;
         }
         const auto& plot = ui.plot;
-        text(window, "Evolution de la population", ui.compact ? 19 : 23, {24.f,20.f});
+        const sf::Color ink = color(Color::Text);
+        const sf::Color muted = color(Color::Muted);
+
+        // En-tete : un titre, une ligne d'info discrete.
+        text(window, "Evolution de la population", ui.compact ? 16 : 18, {24.f,18.f}, 0.f,0.f, ink);
         std::string subtitle = type == GraphType::ExponentialPopulationWithMortality
             ? "Modele exponentiel avec mortalite" : "Modele Lotka-Volterra";
         if (!ui.compact && type == GraphType::ExponentialPopulationWithMortality)
         {
             std::ostringstream detail;
             detail.imbue(std::locale::classic());
-            detail << "P(t) = P0 exp((r - m)t)   |   P0 = " << initialPopulation
+            detail << "P(t) = P0 exp((r - m)t)   P0 = " << initialPopulation
                    << "   r = " << growthRate << "   m = " << mortalityRate;
-            if (textWidth(detail.str(),12) <= static_cast<float>(size.x)-48.f)
+            if (textWidth(detail.str(),11) <= static_cast<float>(size.x)-48.f)
                 subtitle = detail.str();
         }
-        text(window, subtitle, 12, {24.f,51.f}, 0.f,0.f, sf::Color(98,111,128));
-        if (!ui.compact)
-            text(window, automatic ? "SUIVI AUTO" : "ZOOM MANUEL", 11,
-                 {static_cast<float>(size.x)-24.f,28.f}, 1.f,0.f, color(Color::CurrentPopulation));
+        text(window, subtitle, 11, {24.f,46.f}, 0.f,0.f, muted);
+        // Indicateur affiche uniquement quand il est utile (zoom manuel).
+        if (!automatic && !ui.compact)
+            text(window, "Zoom manuel  -  R pour reinitialiser", 11,
+                 {static_cast<float>(size.x)-24.f,20.f}, 1.f,0.f, muted);
 
-        // Legend outside the data area, sized from actual glyph bounds.
+        // Legende (hors zone de donnees), dimensionnee d'apres les glyphes reels.
         float legendX = 24.f;
-        float legendY = 83.f;
+        float legendY = 72.f;
         const bool modelVisible = type == GraphType::ExponentialPopulationWithMortality;
         for (int entry = 0; entry < (modelVisible ? 2 : 1); ++entry)
         {
             const std::string label = entry == 0 ? "Population observee" : "Formule (modele)";
-            const auto ink = color(entry == 0 ? Color::CurrentPopulation : Color::Formula);
-            const float width = 34.f + textWidth(label,12) + 24.f;
+            const auto stroke = color(entry == 0 ? Color::CurrentPopulation : Color::Formula);
+            const float width = 26.f + textWidth(label,11) + 22.f;
             if (legendX + width > static_cast<float>(size.x)-16.f)
-            { legendX=24.f; legendY+=22.f; }
-            line(window, {legendX,legendY}, {legendX+24.f,legendY}, ink, 2.5f);
-            text(window,label,12,{legendX+34.f,legendY},0.f,.5f);
+            { legendX=24.f; legendY+=20.f; }
+            line(window, {legendX,legendY}, {legendX+16.f,legendY}, stroke, 2.f);
+            text(window,label,11,{legendX+24.f,legendY},0.f,.5f, ink);
             legendX += width;
         }
         rectangle(window,plot,sf::Color::White);
@@ -462,28 +528,30 @@ public:
             {plot.position.x/size.x,plot.position.y/size.y},
             {plot.size.x/size.x,plot.size.y/size.y}));
         window.setView(curveView);
-        if (modelVisible) drawCurve(window,formulaPopulation,plot,range,color(Color::Formula));
-        drawCurve(window,currentPopulation,plot,range,color(Color::CurrentPopulation));
+        if (modelVisible) drawCurve(window,formulaPopulation,plot,range,color(Color::Formula),1.75f);
+        drawCurve(window,currentPopulation,plot,range,color(Color::CurrentPopulation),2.25f);
         window.setView(screen);
+
+        // Axes : simple cadre bas/gauche, sans graduations.
         const float bottom = plot.position.y+plot.size.y;
         line(window,plot.position,{plot.position.x,bottom},color(Color::Axes));
         line(window,{plot.position.x,bottom},{plot.position.x+plot.size.x,bottom},color(Color::Axes));
-        text(window,"Temps (pas de simulation)",13,{plot.position.x+plot.size.x*.5f,bottom+37.f},.5f);
+        text(window,"Temps (pas de simulation)",12,{plot.position.x+plot.size.x*.5f,bottom+30.f},.5f,0.f,muted);
         if (hasFont)
         {
-            sf::Text label(font,"Population",13);
+            sf::Text label(font,"Population",12);
             const auto bounds=label.getLocalBounds();
             label.setOrigin({bounds.position.x+bounds.size.x*.5f,bounds.position.y+bounds.size.y*.5f});
             label.setRotation(sf::degrees(-90.f));
-            label.setPosition({20.f,plot.position.y+plot.size.y*.5f});
-            label.setFillColor(color(Color::Text));
+            label.setPosition({18.f,std::round(plot.position.y+plot.size.y*.5f)});
+            label.setFillColor(muted);
             window.draw(label);
         }
         const std::string help = ui.compact ? "Molette : zoom  |  R : auto  |  Tab : simulation"
-            : "Molette : zoom au curseur   |   R / Home : cadrage auto   |   Espace : pause   |   Tab : simulation";
-        text(window,help,ui.compact ? 10 : 11,{24.f,static_cast<float>(size.y)-15.f},0.f,.5f,sf::Color(98,111,128));
+            : "Molette : zoom  |  R : cadrage auto  |  Espace : pause  |  Tab : simulation";
+        text(window,help,10,{24.f,static_cast<float>(size.y)-14.f},0.f,.5f,muted);
         if (times.empty())
-            text(window,"En attente de donnees",14,{plot.position.x+plot.size.x*.5f,plot.position.y+plot.size.y*.5f},.5f,.5f);
+            text(window,"En attente de donnees",14,{plot.position.x+plot.size.x*.5f,plot.position.y+plot.size.y*.5f},.5f,.5f,muted);
         window.setView(saved);
     }
 
