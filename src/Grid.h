@@ -39,7 +39,7 @@ public:
     //* Von Neumann Neighborhood (4 directions). Shared with all entities.
     static const std::array<sf::Vector2i, 4>& neighbourhood()
     {
-        static const std::array<sf::Vector2i, 4> directions{{
+        static constexpr std::array<sf::Vector2i, 4> directions{{
             sf::Vector2i{0, -1}, 
             sf::Vector2i{0, 1},
             sf::Vector2i{-1, 0}, 
@@ -72,13 +72,13 @@ public:
 
     //* ---- Dimensions ----
 
-    int getCols() const noexcept { return cols; }
-    int getRows() const noexcept { return rows; }
+    [[nodiscard]] int getCols() const noexcept { return cols; }
+    [[nodiscard]] int getRows() const noexcept { return rows; }
 
-    float pixelWidth() const noexcept { return static_cast<float>(cols) * Cell::CELL_SIZE; }
-    float pixelHeight() const noexcept { return static_cast<float>(rows) * Cell::CELL_SIZE; }
+    [[nodiscard]] float pixelWidth() const noexcept { return static_cast<float>(cols) * Cell::CELL_SIZE; }
+    [[nodiscard]] float pixelHeight() const noexcept { return static_cast<float>(rows) * Cell::CELL_SIZE; }
 
-    bool bounds(sf::Vector2i position) const noexcept
+    [[nodiscard]] bool bounds(sf::Vector2i position) const noexcept
     {
         return position.x >= 0 && position.x < cols && position.y >= 0 && position.y < rows;
     }
@@ -94,7 +94,7 @@ public:
         return cells[index(position)];
     }
 
-    const Cell& getCellAt(sf::Vector2i position) const
+    [[nodiscard]] const Cell& getCellAt(sf::Vector2i position) const
     {
         if (!bounds(position))
         {
@@ -103,12 +103,12 @@ public:
         return cells[index(position)];
     }
 
-    Entity* entityAt(sf::Vector2i position) const noexcept
+    [[nodiscard]] Entity* entityAt(sf::Vector2i position) const noexcept
     {
         return bounds(position) ? cells[index(position)].getContent() : nullptr;
     }
 
-    bool isFree(sf::Vector2i position) const noexcept
+    [[nodiscard]] bool isFree(sf::Vector2i position) const noexcept
     {
         return bounds(position) && cells[index(position)].isEmpty();
     }
@@ -219,12 +219,12 @@ public:
 
     //* ---- Stats ----
 
-    std::size_t population() const noexcept { return entities.size(); }
-    std::size_t births() const noexcept { return birthCount; }
-    std::size_t deaths() const noexcept { return deathCount; }
-    std::size_t herbivorePopulation() const noexcept { return herbivoreCount; }
+    [[nodiscard]] std::size_t population() const noexcept { return entities.size(); }
+    [[nodiscard]] std::size_t births() const noexcept { return birthCount; }
+    [[nodiscard]] std::size_t deaths() const noexcept { return deathCount; }
+    [[nodiscard]] std::size_t herbivorePopulation() const noexcept { return herbivoreCount; }
 
-    std::size_t populationOf(Species species) const noexcept
+    [[nodiscard]] std::size_t populationOf(Species species) const noexcept
     {
         if (species == Species::Herbivore) return herbivoreCount;
 

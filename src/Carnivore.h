@@ -2,13 +2,10 @@
 #define CARNIVORE_H
 
 #include <string>
-#include <cmath>
 
 #include "Entity.h"
 #include "Grid.h"
 #include "Random.h"
-
-
 
 class Carnivore : public Entity
 {
@@ -30,9 +27,9 @@ public:
 
     //* ---- Rendering ----
 
-    Species species() const noexcept override { return Species::Carnivore; }
+    [[nodiscard]] Species species() const noexcept override { return Species::Carnivore; }
 
-    sf::Color color() const noexcept override
+    [[nodiscard]] sf::Color color() const noexcept override
     {
         // The newer entity are clearer
         return isMature() ? sf::Color(236, 56, 90) : sf::Color(139, 0, 0);
@@ -40,11 +37,11 @@ public:
 
     //* ---- State ----
 
-    int getAge() const noexcept { return age; }
-    void setAge(int newAge) noexcept { age = newAge; }
+    [[nodiscard]] int getAge() const noexcept { return age; }
+    void setAge(const int newAge) noexcept { age = newAge; }
 
-    bool isMature() const noexcept { return age >= MATURITY_AGE; }
-    bool canReproduce() const noexcept { return isMature() && cooldown == 0; }
+    [[nodiscard]] bool isMature() const noexcept { return age >= MATURITY_AGE; }
+    [[nodiscard]] bool canReproduce() const noexcept { return isMature() && cooldown == 0; }
 
     void update() override
     {
@@ -54,7 +51,7 @@ public:
         // Roll death
         if (age >= MATURITY_AGE) {
 
-            float randomisedNumber = Random::inRangef(1.0f, 100.0f);
+            const float randomisedNumber = Random::inRangef(1.0f, 100.0f);
             std::cout << "Randomised Number: " << randomisedNumber ;
 
             if (randomisedNumber <= DEATH_PROBABILITY) {
@@ -76,9 +73,9 @@ public:
             Entity* neighbour = grid.entityAt(position + direction);
 
             // Test enum d'abord : on n'appelle static_cast que si c'est bien un herbivore.
-            if (neighbour == nullptr || neighbour->species() != Species::Herbivore) continue;
+            if (neighbour == nullptr || neighbour->species() != Species::Carnivore) continue;
 
-            Carnivore* partner = static_cast<Carnivore*>(neighbour);
+            auto* partner = dynamic_cast<Carnivore*>(neighbour);
             if (!partner->canReproduce()) continue;
 
             const std::optional<sf::Vector2i> cradle = grid.randomFreeNeighbour(position);

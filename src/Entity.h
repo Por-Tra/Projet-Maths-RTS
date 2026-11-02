@@ -59,7 +59,7 @@ public:
 
 private:
     friend class Grid;
-    void setPosition(sf::Vector2i newPosition) noexcept { position = newPosition; }
+    void setPosition(const sf::Vector2i newPosition) noexcept { position = newPosition; }
 };
 
 #endif // ENTITY_H

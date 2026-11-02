@@ -44,7 +44,7 @@ private:
         background.setFillColor(sf::Color::White);
         background.setPosition(sf::Vector2f(0.f, 0.f));
 
-        const sf::Color lineColor(190, 190, 190);
+        constexpr sf::Color lineColor(190, 190, 190);
 
         gridLines.clear();
         for (int x = 0; x <= grid.getCols(); ++x)
@@ -79,12 +79,11 @@ private:
 
     void appendCircle(sf::Vector2f center, float radius, sf::Color color)
     {
-        constexpr float TWO_PI = 6.28318530718f; //! cpp 17, so can't use <numbers>
-
         sf::Vector2f previous(center.x + radius, center.y);
 
         for (int i = 1; i <= CIRCLE_SEGMENTS; ++i)
         {
+            constexpr float TWO_PI = 6.28318530718f;
             const float angle = TWO_PI * static_cast<float>(i) / static_cast<float>(CIRCLE_SEGMENTS);
             const sf::Vector2f current(center.x + radius * std::cos(angle), center.y + radius * std::sin(angle));
 

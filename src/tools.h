@@ -2,9 +2,6 @@
 #define TOOLS_H
 
 #include <fstream>
-#include <iostream>
-
-#include "Entity.h"
 #include "Grid.h"
 
 inline void writeCsvHeader(std::ofstream& file)

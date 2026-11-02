@@ -1,18 +1,16 @@
 #include <fstream>
-#include <iostream>
 
 #include "Application.h"
 #include "Grid.h"
 #include "Herbivore.h"
 #include "Carnivore.h"
-#include "tools.h"
 
 namespace //Variables container
 {
     constexpr int WINDOW_WIDTH = 1000;
     constexpr int WINDOW_HEIGHT = 1000;
-    constexpr int INITIAL_HERBIVORES = 300;
-    constexpr int INITIAL_CARNIVORES = 300;
+    constexpr int INITIAL_HERBIVORES = 50;
+    constexpr int INITIAL_CARNIVORES = 100;
     constexpr float TICKS_PER_SECOND = 100.f;
 
     void seedPopulation(Grid& grid, int h_count, int c_count)
