@@ -9,8 +9,8 @@ namespace //Variables container
 {
     constexpr int WINDOW_WIDTH = 1000;
     constexpr int WINDOW_HEIGHT = 1000;
-    constexpr int INITIAL_HERBIVORES = 50;
-    constexpr int INITIAL_CARNIVORES = 100;
+    constexpr int INITIAL_HERBIVORES = 0;
+    constexpr int INITIAL_CARNIVORES = 200;
     constexpr float TICKS_PER_SECOND = 100.f;
 
     void seedPopulation(Grid& grid, int h_count, int c_count)

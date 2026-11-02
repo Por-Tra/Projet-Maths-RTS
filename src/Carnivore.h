@@ -13,7 +13,7 @@ public:
     // 
     static constexpr int MATURITY_AGE = 100;
     static constexpr int REPRODUCTION_COOLDOWN = 30;
-    static constexpr float DEATH_PROBABILITY = 1.5f; // 0.3% Chance to die each cycle.
+    // static constexpr float DEATH_PROBABILITY = 1.5f; // 0.3% Chance to die each cycle.
 
 private:
     int age = 0;
@@ -48,19 +48,19 @@ public:
         ++age;
         if (cooldown > 0) --cooldown;
 
-        // Roll death
-        if (age >= MATURITY_AGE) {
-
-            const float randomisedNumber = Random::inRangef(1.0f, 100.0f);
-            std::cout << "Randomised Number: " << randomisedNumber ;
-
-            if (randomisedNumber <= DEATH_PROBABILITY) {
-                kill();
-                std::cout << " Mourir";
-            }
-
-            std::cout << std::endl;
-        }
+        // // Roll death
+        // if (age >= MATURITY_AGE) {
+        //
+        //     const float randomisedNumber = Random::inRangef(1.0f, 100.0f);
+        //     std::cout << "Randomised Number: " << randomisedNumber ;
+        //
+        //     if (randomisedNumber <= DEATH_PROBABILITY) {
+        //         kill();
+        //         std::cout << " Mourir";
+        //     }
+        //
+        //     std::cout << std::endl;
+        // }
     }
 
     //* ---- Reproducing ----
@@ -86,6 +86,33 @@ public:
                 cooldown = REPRODUCTION_COOLDOWN;
                 partner->cooldown = REPRODUCTION_COOLDOWN;
             }
+            return;
+        }
+    }
+
+    //* ---- Killing between predator -----
+    void killingPredators(Grid& grid) override {
+        for (const sf::Vector2i& direction : Grid::neighbourhood())
+        {
+            Entity* neighbour = grid.entityAt(position + direction);
+
+            // Test enum d'abord : on n'appelle static_cast que si c'est bien un herbivore.
+            if (neighbour == nullptr || neighbour->species() != Species::Carnivore) continue;
+
+            auto* opponent = dynamic_cast<Carnivore*>(neighbour);
+            //if (!partner->canReproduce()) continue;
+
+            // const std::optional<sf::Vector2i> cradle = grid.randomFreeNeighbour(position);
+            // if (!cradle) return; // pas de place autour : ce sera pour un autre tour
+
+            // if (grid.spawn<Carnivore>(*cradle, name + " Jr") != nullptr)
+            // {
+            //     cooldown = REPRODUCTION_COOLDOWN;
+            //     partner->cooldown = REPRODUCTION_COOLDOWN;
+            // }
+            opponent->kill();
+            std::cout << "Opponent has been killed." << std::endl;
+
             return;
         }
     }

@@ -186,6 +186,8 @@ public:
             entity->update();
             entity->move(*this);
             entity->reproduce(*this);
+            entity->killingPredators(*this);
+
         }
 
         collectDead();

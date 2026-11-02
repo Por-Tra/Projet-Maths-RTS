@@ -75,6 +75,10 @@ public:
         }
     }
 
+    void killingPredators(Grid& grid) override {
+
+    }
+
 protected:
     sf::Vector2i chooseDirection(Grid& grid) const override
     {

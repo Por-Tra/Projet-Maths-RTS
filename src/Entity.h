@@ -55,6 +55,8 @@ public:
 
     virtual void reproduce(Grid& grid) = 0;
 
+    virtual void killingPredators(Grid& grid) = 0;
+
     virtual void update() = 0;
 
 private:
