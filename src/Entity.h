@@ -55,7 +55,7 @@ public:
 
     virtual void reproduce(Grid& grid) = 0;
 
-    virtual void killingPredators(Grid& grid) = 0;
+    virtual void killingHerbivores(Grid& grid, bool printKillLog) = 0;
 
     virtual void update() = 0;
 

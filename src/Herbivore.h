@@ -75,9 +75,7 @@ public:
         }
     }
 
-    void killingPredators(Grid& grid) override {
-
-    }
+    void killingHerbivores(Grid& grid, const bool printKillLog) override { } // USED IN CARNIVORE - PROB SHOULDN'T BE DONE THAT WAY
 
 protected:
     sf::Vector2i chooseDirection(Grid& grid) const override

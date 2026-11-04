@@ -10,19 +10,37 @@
 class Carnivore : public Entity
 {
 public:
-    // 
     static constexpr int MATURITY_AGE = 100;
     static constexpr int REPRODUCTION_COOLDOWN = 30;
-    // static constexpr float DEATH_PROBABILITY = 1.5f; // 0.3% Chance to die each cycle.
+
+    // Satiety
+    static constexpr float MIN_SATIETY_LEVEL = 0.0f;
+    static constexpr float MAX_SATIETY_LEVEL = 100.0f;
+    static constexpr float SATIETY_CONSUME_THRESHOLD = 5.0f; // Above that value the carnivore can consume another entity
+    static constexpr float SATIETY_GAIN_VALUE = 2.5f;
+    static constexpr float SATIETY_LOSE_VALUE = 0.1f;
 
 private:
     int age = 0;
     int cooldown = 0; // 0 = ready to reproduce
+    float satietyLevel = MAX_SATIETY_LEVEL;
 
 public:
     explicit Carnivore(std::string entityName = "Carnivore")
         : Entity(std::move(entityName))
     {
+    }
+
+    void update() override
+    {
+        ++age;
+        if (cooldown > 0) --cooldown;
+
+        loseSatiety(SATIETY_LOSE_VALUE); // Lose satiety each update
+        if (satietyLevel == MIN_SATIETY_LEVEL) { // Dies to hunger
+            std::cout << "[" << name << "]" << " Died to hunger." << std::endl;
+            kill();
+        }
     }
 
     //* ---- Rendering ----
@@ -43,25 +61,22 @@ public:
     [[nodiscard]] bool isMature() const noexcept { return age >= MATURITY_AGE; }
     [[nodiscard]] bool canReproduce() const noexcept { return isMature() && cooldown == 0; }
 
-    void update() override
-    {
-        ++age;
-        if (cooldown > 0) --cooldown;
+    //* ---- Satiety Level Management ----
 
-        // // Roll death
-        // if (age >= MATURITY_AGE) {
-        //
-        //     const float randomisedNumber = Random::inRangef(1.0f, 100.0f);
-        //     std::cout << "Randomised Number: " << randomisedNumber ;
-        //
-        //     if (randomisedNumber <= DEATH_PROBABILITY) {
-        //         kill();
-        //         std::cout << " Mourir";
-        //     }
-        //
-        //     std::cout << std::endl;
-        // }
+    void gainSatiety(const float value) {
+        satietyLevel += value;
+
+        if (satietyLevel > MAX_SATIETY_LEVEL) satietyLevel = MAX_SATIETY_LEVEL; // Clamping
     }
+
+    void loseSatiety(const float value) {
+        satietyLevel -= value;
+
+        if (satietyLevel < MIN_SATIETY_LEVEL) satietyLevel = MIN_SATIETY_LEVEL; // Clamping
+    }
+
+    [[nodiscard]] bool isAbleToConsume() const { return satietyLevel >= SATIETY_CONSUME_THRESHOLD; }
+    [[nodiscard]] float satietyRatio() const noexcept { return satietyLevel / MAX_SATIETY_LEVEL; } // 0.0 -> 1.0
 
     //* ---- Reproducing ----
     void reproduce(Grid& grid) override
@@ -78,40 +93,49 @@ public:
             auto* partner = dynamic_cast<Carnivore*>(neighbour);
             if (!partner->canReproduce()) continue;
 
+            // Chance de reproduction = satiété moyenne du couple (0% affamés -> 100% rassasiés)
+            const float reproductionChance = (satietyRatio() + partner->satietyRatio()) * 0.5f;
+            const int roll = Random::inRange(0, 99);
+
+            // Roll failed : Kill
+            if (roll >= static_cast<int>(reproductionChance * 100.0f))
+            {
+                partner->kill();
+                return;
+            }
+
+            // Reproduce
             const std::optional<sf::Vector2i> cradle = grid.randomFreeNeighbour(position);
-            if (!cradle) return; // pas de place autour : ce sera pour un autre tour
+            if (!cradle) return;
 
             if (grid.spawn<Carnivore>(*cradle, name + " Jr") != nullptr)
             {
                 cooldown = REPRODUCTION_COOLDOWN;
                 partner->cooldown = REPRODUCTION_COOLDOWN;
+                return;
             }
-            return;
         }
     }
 
-    //* ---- Killing between predator -----
-    void killingPredators(Grid& grid) override {
+    //* ---- CONSUME Herbivores -----
+    void killingHerbivores(Grid& grid, const bool printKillLog) override {
+        if (!isAbleToConsume()) return; // Satiety Level isn't high enough
+
         for (const sf::Vector2i& direction : Grid::neighbourhood())
         {
             Entity* neighbour = grid.entityAt(position + direction);
 
-            // Test enum d'abord : on n'appelle static_cast que si c'est bien un herbivore.
-            if (neighbour == nullptr || neighbour->species() != Species::Carnivore) continue;
+            // Verification if neighbour is a Herbivore
+            if (neighbour == nullptr || neighbour->species() != Species::Herbivore) continue;
 
-            auto* opponent = dynamic_cast<Carnivore*>(neighbour);
-            //if (!partner->canReproduce()) continue;
+            auto* prey = dynamic_cast<Herbivore*>(neighbour);
 
-            // const std::optional<sf::Vector2i> cradle = grid.randomFreeNeighbour(position);
-            // if (!cradle) return; // pas de place autour : ce sera pour un autre tour
+            // Proceed Killing and gain satiety
+            prey->kill();
+            gainSatiety(SATIETY_GAIN_VALUE);
 
-            // if (grid.spawn<Carnivore>(*cradle, name + " Jr") != nullptr)
-            // {
-            //     cooldown = REPRODUCTION_COOLDOWN;
-            //     partner->cooldown = REPRODUCTION_COOLDOWN;
-            // }
-            opponent->kill();
-            std::cout << "Opponent has been killed." << std::endl;
+            if (printKillLog) // Killing Info
+                std::cout << "[" << name << "]" << " > Killed a Herbivore. (" << prey->getName() << " / +" << SATIETY_GAIN_VALUE << "S)" << std::endl;
 
             return;
         }
