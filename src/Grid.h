@@ -186,7 +186,7 @@ public:
             entity->update();
             entity->move(*this);
             entity->reproduce(*this);
-            entity->killingHerbivores(*this, true);
+            entity->killingHerbivores(*this, false);
         }
 
         collectDead();

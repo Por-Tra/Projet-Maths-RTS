@@ -38,7 +38,6 @@ public:
 
         loseSatiety(SATIETY_LOSE_VALUE); // Lose satiety each update
         if (satietyLevel == MIN_SATIETY_LEVEL) { // Dies to hunger
-            std::cout << "[" << name << "]" << " Died to hunger." << std::endl;
             kill();
         }
     }

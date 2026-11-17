@@ -17,7 +17,7 @@ class Renderer
     sf::Sprite backgroundSprite{backgroundTexture};
     sf::VertexArray entityTriangles{sf::PrimitiveType::Triangles};
 
-    static constexpr int CIRCLE_SEGMENTS = 12; // 12 suffit largement a 10 px de rayon
+    static constexpr int CIRCLE_SEGMENTS = 4; // 12 suffit largement a 10 px de rayon
     static constexpr float RADIUS_RATIO = 0.35f;
 
 public:
