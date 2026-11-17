@@ -5,7 +5,6 @@
 
 #include "Entity.h"
 #include "Grid.h"
-#include "Random.h"
 
 class Herbivore : public Entity
 {
@@ -26,9 +25,9 @@ public:
 
     //* ---- Rendering ----
 
-    Species species() const noexcept override { return Species::Herbivore; }
+    [[nodiscard]] Species species() const noexcept override { return Species::Herbivore; }
 
-    sf::Color color() const noexcept override
+    [[nodiscard]] sf::Color color() const noexcept override
     {
         // The newer entity are clearer
         return isMature() ? sf::Color(60, 200, 60) : sf::Color(160, 240, 160);
@@ -36,11 +35,11 @@ public:
 
     //* ---- State ----
 
-    int getAge() const noexcept { return age; }
-    void setAge(int newAge) noexcept { age = newAge; }
+    [[nodiscard]] int getAge() const noexcept { return age; }
+    void setAge(const int newAge) noexcept { age = newAge; }
 
-    bool isMature() const noexcept { return age >= MATURITY_AGE; }
-    bool canReproduce() const noexcept { return isMature() && cooldown == 0; }
+    [[nodiscard]] bool isMature() const noexcept { return age >= MATURITY_AGE; }
+    [[nodiscard]] bool canReproduce() const noexcept { return isMature() && cooldown == 0; }
 
     void update() override
     {
@@ -61,7 +60,7 @@ public:
             // Test enum d'abord : on n'appelle static_cast que si c'est bien un herbivore.
             if (neighbour == nullptr || neighbour->species() != Species::Herbivore) continue;
 
-            Herbivore* partner = static_cast<Herbivore*>(neighbour);
+            auto* partner = dynamic_cast<Herbivore*>(neighbour);
             if (!partner->canReproduce()) continue;
 
             const std::optional<sf::Vector2i> cradle = grid.randomFreeNeighbour(position);

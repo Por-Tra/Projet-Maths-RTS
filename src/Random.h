@@ -22,6 +22,11 @@ namespace Random
         return dist(engine());
     }
 
+    inline float inRangef(float min, float max) {
+        std::uniform_real_distribution<float> dist(min, max);
+        return dist(engine());
+    }
+
     inline float unit()
     {
         std::uniform_real_distribution<float> dist(0.f, 1.f);

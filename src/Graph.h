@@ -39,7 +39,7 @@ public:
     enum class Color { Background, Axes, Grid, Formula, CurrentPopulation, Text, Muted };
 
 private:
-    // Seule police du projet : asset/Lato-Bold.ttf (aucune police systeme).
+    
     static constexpr const char* FONT_FILE = "Lato-Bold.ttf";
     static constexpr unsigned TICK_SIZE = 11;
 
@@ -64,9 +64,7 @@ private:
     bool automatic{true};
     Range zoomRange;
 
-    // ---------------------------------------------------------------- police
-    // Dossier de l'executable : permet de retrouver asset/ quel que soit le
-    // repertoire de travail (IDE, terminal, build/, build/Release/...).
+
     static std::filesystem::path executableDir()
     {
         namespace fs = std::filesystem;
@@ -100,7 +98,6 @@ private:
         if (!explicitPath.empty()) result.emplace_back(explicitPath);
         if (const char* env = std::getenv("GRAPH_FONT")) result.emplace_back(env);
 #ifdef ASSET_DIR
-        // Defini par CMake : target_compile_definitions(... ASSET_DIR="${CMAKE_SOURCE_DIR}/asset")
         result.push_back(fs::path(ASSET_DIR) / FONT_FILE);
 #endif
         std::error_code ec;
@@ -120,18 +117,18 @@ private:
         return result;
     }
 
-    // ---------------------------------------------------------------- dessin
-    sf::Color color(Color value) const noexcept
+    // ---------------------------------------------------------------- draw
+    static sf::Color color(Color value) noexcept
     {
         switch (value)
         {
-            case Color::Background:        return sf::Color(248, 250, 252);
-            case Color::Axes:              return sf::Color(170, 180, 192);
-            case Color::Grid:              return sf::Color(234, 238, 244);
-            case Color::Formula:           return sf::Color(219, 119, 36);
-            case Color::CurrentPopulation: return sf::Color(38, 108, 184);
-            case Color::Text:              return sf::Color(51, 65, 85);
-            case Color::Muted:             return sf::Color(120, 132, 148);
+            case Color::Background:        return {248, 250, 252};
+            case Color::Axes:              return {170, 180, 192};
+            case Color::Grid:              return {234, 238, 244};
+            case Color::Formula:           return {219, 119, 36};
+            case Color::CurrentPopulation: return {38, 108, 184};
+            case Color::Text:              return {51, 65, 85};
+            case Color::Muted:             return {120, 132, 148};
         }
         return sf::Color::Black;
     }
@@ -387,7 +384,7 @@ public:
     // Chemin explicite optionnel (sinon : GRAPH_FONT, ASSET_DIR, puis asset/Lato-Bold.ttf
     // recherche depuis l'executable et le repertoire courant).
     Graph(Grid& simulationGrid, GraphType graphType, const std::string& fontPath = "")
-        : grid(simulationGrid), type(graphType)
+    : grid(simulationGrid), type(graphType)
     {
         std::error_code ec;
         for (const auto& path : fontCandidates(fontPath))
@@ -395,6 +392,7 @@ public:
             if (std::filesystem::is_regular_file(path, ec) && font.openFromFile(path))
             { hasFont = true; break; }
         }
+
         if (!hasFont)
             std::cerr << "[Graph] Police introuvable : asset/" << FONT_FILE << ".\n"
                          "Lancez le programme depuis le projet, copiez asset/ a cote de "
@@ -429,7 +427,7 @@ public:
     void update(float time)
     {
         if (!std::isfinite(time) || time < 0.f) return;
-        const float population = static_cast<float>(grid.herbivorePopulation());
+        const auto population = static_cast<float>(grid.herbivorePopulation());
         if (times.empty())
         {
             initialPopulation = population;
@@ -437,9 +435,9 @@ public:
 
         if (!times.empty() && time <= times.back()) return;
 
-        // Sous-échantillonnage progressif : une fois le tampon compacté, on
-        // n'enregistre qu'un pas de temps sur "sampleStride" pour continuer à
-        // couvrir toute la durée écoulée sans jamais effacer le début.
+        //! Sous-échantillonnage progressif : une fois le tampon compacté, on
+        //! n'enregistre qu'un pas de temps sur "sampleStride" pour continuer à
+        //! couvrir toute la durée écoulée sans jamais effacer le début.
         ++sampleCounter;
         if (sampleStride > 1 && (sampleCounter % sampleStride) != 0) return;
 
@@ -463,8 +461,7 @@ public:
         }
     }
 
-    void draw(sf::RenderWindow& window)
-    {
+    void draw(sf::RenderWindow& window) const {
         const auto size = window.getSize();
         if (size.x == 0 || size.y == 0) return;
         // Screen-space view: one unit = one pixel, independent of gameView.
@@ -476,7 +473,7 @@ public:
         const Layout ui = layout(size,range);
         if (!ui.usable)
         {
-            text(window, "Agrandissez la fenetre", 14, {size.x*.5f,size.y*.5f}, .5f,.5f, color(Color::Muted));
+            text(window, "Agrandissez la fenetre", 14, {size.x * .5f,size.y * .5f}, .5f,.5f, color(Color::Muted));  // NOLINT
             window.setView(saved);
             return;
         }
@@ -524,8 +521,8 @@ public:
         // Restrict thick lines and endpoint markers to the plot viewport.
         sf::View curveView(plot);
         curveView.setViewport(sf::FloatRect(
-            {plot.position.x/size.x,plot.position.y/size.y},
-            {plot.size.x/size.x,plot.size.y/size.y}));
+            {plot.position.x/size.x,plot.position.y/size.y}, // NOLINT
+            {plot.size.x/size.x,plot.size.y/size.y})); // NOLINT
         window.setView(curveView);
         if (modelVisible) drawCurve(window,formulaPopulation,plot,range,color(Color::Formula),1.75f);
         drawCurve(window,currentPopulation,plot,range,color(Color::CurrentPopulation),2.25f);

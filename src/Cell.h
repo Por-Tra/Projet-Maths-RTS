@@ -26,15 +26,15 @@ public:
 
     // ---- Coordinate Management ----
 
-    int getX() const noexcept { return coordinates.x; }
-    int getY() const noexcept { return coordinates.y; }
-    sf::Vector2i getCoordinates() const noexcept { return coordinates; }
+    [[nodiscard]] int getX() const noexcept { return coordinates.x; }
+    [[nodiscard]] int getY() const noexcept { return coordinates.y; }
+    [[nodiscard]] sf::Vector2i getCoordinates() const noexcept { return coordinates; }
 
     // ---- Content Management ----
 
-    bool isEmpty() const noexcept { return cell_content == nullptr; }
+    [[nodiscard]] bool isEmpty() const noexcept { return cell_content == nullptr; }
 
-    Entity* getContent() const noexcept { return cell_content; }
+    [[nodiscard]] Entity* getContent() const noexcept { return cell_content; }
 
     void setContent(Entity* entity) noexcept { cell_content = entity; }
 

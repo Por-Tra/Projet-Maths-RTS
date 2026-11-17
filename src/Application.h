@@ -10,6 +10,7 @@
 #include <SFML/Graphics.hpp>
 
 #include "Grid.h"
+#include "Diagram.h"
 #include "Renderer.h"
 #include "tools.h"
 #include "Graph.h"
@@ -25,6 +26,7 @@ class Application
     {
         Simulation,
         Graph,
+        Diagram_phase,
         Empty
     };
 
@@ -33,6 +35,7 @@ class Application
     Grid& grid;
     Renderer renderer;
     Graph graph{grid, GraphType::ExponentialPopulationWithMortality};
+    Diagram diagram{grid};
     sf::RenderWindow window;
     sf::View gameView;
     sf::Time tickDuration;
@@ -58,6 +61,7 @@ public:
             appendCsvLine(csvFile, timeStep, grid);
         }
         graph.update(0.f);
+        diagram.update(0.f);
     }
 
     void run()
@@ -79,6 +83,7 @@ public:
                     grid.step();
                     appendCsvLine(csvFile, ++timeStep, grid);
                     graph.update(static_cast<float>(timeStep));
+                    diagram.update(static_cast<float>(timeStep));
                 }
                 accumulator -= tickDuration;
             }
@@ -94,6 +99,10 @@ public:
             else if (currentTab == Tab::Graph)
             {
                 graph.draw(window);
+            }
+            else if (currentTab == Tab::Diagram_phase)
+            {
+                diagram.draw(window);
             }
             else if (currentTab == Tab::Empty)
             {
@@ -116,12 +125,12 @@ private:
         const sf::Vector2u desktopSize = sf::VideoMode::getDesktopMode().size;
         const float availableWidth = static_cast<float>(desktopSize.x) * 0.9f;
         const float availableHeight = static_cast<float>(desktopSize.y) * 0.9f;
-        const float scale = std::min({1.f, availableWidth / simulationGrid.pixelWidth(),
-                                      availableHeight / simulationGrid.pixelHeight()});
+        const float scale = std::min({1.f, availableWidth / simulationGrid.pixelWidth(), availableHeight / simulationGrid.pixelHeight()});
 
         return sf::Vector2u{
             std::max(1u, static_cast<unsigned int>(simulationGrid.pixelWidth() * scale)),
-            std::max(1u, static_cast<unsigned int>(simulationGrid.pixelHeight() * scale))};
+            std::max(1u, static_cast<unsigned int>(simulationGrid.pixelHeight() * scale))
+        };
     }
 
     void configureView(sf::Vector2u windowSize)
@@ -169,6 +178,10 @@ private:
                 graph.handleEvent(*event, window);
             }
 
+            if (currentTab == Tab::Diagram_phase) {
+                diagram.handleEvent(*event, window);
+            }
+
             //! Key manager
             if (const auto* key = event->getIf<sf::Event::KeyPressed>())
             {
@@ -176,7 +189,13 @@ private:
                 if (key->code == sf::Keyboard::Key::Space) paused = !paused;
                 if (key->code == sf::Keyboard::Key::Tab)
                 {
-                    currentTab = (currentTab == Tab::Simulation) ? Tab::Graph : Tab::Simulation;
+                    switch (currentTab)
+                    {
+                        case Tab::Simulation: currentTab = Tab::Graph; break;
+                        case Tab::Graph: currentTab = Tab::Diagram_phase; break;
+                        case Tab::Diagram_phase: currentTab = Tab::Empty; break;
+                        case Tab::Empty: currentTab = Tab::Simulation; break;
+                    }
                 }
             }
         }
