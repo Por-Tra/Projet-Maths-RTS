@@ -203,6 +203,10 @@ public:
             {
                 --herbivoreCount;
             }
+            if (entity->species() == Species::Carnivore)
+            {
+                --carnivoreCount;
+            }
 
             const sf::Vector2i position = entity->getPosition();
             if (bounds(position) && cells[index(position)].getContent() == entity.get())
@@ -223,6 +227,8 @@ public:
     [[nodiscard]] std::size_t births() const noexcept { return birthCount; }
     [[nodiscard]] std::size_t deaths() const noexcept { return deathCount; }
     [[nodiscard]] std::size_t herbivorePopulation() const noexcept { return herbivoreCount; }
+    [[nodiscard]] std::size_t carnivorePopulation() const noexcept { return carnivoreCount; }
+
 
     [[nodiscard]] std::size_t populationOf(Species species) const noexcept
     {

@@ -52,7 +52,7 @@ public:
         if (age >= MATURITY_AGE) {
 
             const float randomisedNumber = Random::inRangef(1.0f, 100.0f);
-            std::cout << "Randomised Number: " << randomisedNumber ;
+            // std::cout << "Randomised Number: " << randomisedNumber ;
 
             if (randomisedNumber <= DEATH_PROBABILITY) {
                 kill();

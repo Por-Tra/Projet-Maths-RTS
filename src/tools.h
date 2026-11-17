@@ -6,15 +6,13 @@
 
 inline void writeCsvHeader(std::ofstream& file)
 {
-    file << "Time,HerbivoreCount,Total_Births,Total_Deaths,Current_population\n";
+    file << "Time,HerbivoreCount,CarnivoreCount\n";
 }
 
 inline void appendCsvLine(std::ofstream& file, int time, const Grid& grid)
 {
-    const long long score = static_cast<long long>(grid.births())
-                          - static_cast<long long>(grid.deaths());
-    file << time << ',' << grid.herbivorePopulation() << ',' << grid.births() << ','
-         << grid.deaths() << ',' << score << '\n';
+    const long long score = static_cast<long long>(grid.births()) - static_cast<long long>(grid.deaths());
+    file << time << ',' << grid.herbivorePopulation() << ',' << grid.carnivorePopulation() << '\n';
 }
 
 #endif // TOOLS_H

@@ -64,9 +64,7 @@ private:
     bool automatic{true};
     Range zoomRange;
 
-    // ---------------------------------------------------------------- police
-    // Dossier de l'executable : permet de retrouver asset/ quel que soit le
-    // repertoire de travail (IDE, terminal, build/, build/Release/...).
+
     static std::filesystem::path executableDir()
     {
         namespace fs = std::filesystem;
@@ -100,7 +98,6 @@ private:
         if (!explicitPath.empty()) result.emplace_back(explicitPath);
         if (const char* env = std::getenv("GRAPH_FONT")) result.emplace_back(env);
 #ifdef ASSET_DIR
-        // Defini par CMake : target_compile_definitions(... ASSET_DIR="${CMAKE_SOURCE_DIR}/asset")
         result.push_back(fs::path(ASSET_DIR) / FONT_FILE);
 #endif
         std::error_code ec;
@@ -120,7 +117,7 @@ private:
         return result;
     }
 
-    // ---------------------------------------------------------------- dessin
+    // ---------------------------------------------------------------- draw
     static sf::Color color(Color value) noexcept
     {
         switch (value)
@@ -438,9 +435,9 @@ public:
 
         if (!times.empty() && time <= times.back()) return;
 
-        // Sous-échantillonnage progressif : une fois le tampon compacté, on
-        // n'enregistre qu'un pas de temps sur "sampleStride" pour continuer à
-        // couvrir toute la durée écoulée sans jamais effacer le début.
+        //! Sous-échantillonnage progressif : une fois le tampon compacté, on
+        //! n'enregistre qu'un pas de temps sur "sampleStride" pour continuer à
+        //! couvrir toute la durée écoulée sans jamais effacer le début.
         ++sampleCounter;
         if (sampleStride > 1 && (sampleCounter % sampleStride) != 0) return;
 
