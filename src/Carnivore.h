@@ -56,7 +56,7 @@ public:
 
             if (randomisedNumber <= DEATH_PROBABILITY) {
                 kill();
-                std::cout << " Mourir";
+                // std::cout << " Mourir";
             }
 
             std::cout << std::endl;

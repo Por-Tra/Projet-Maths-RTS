@@ -7,8 +7,8 @@
 
 namespace //Variables container
 {
-    constexpr int WINDOW_WIDTH = 1000;
-    constexpr int WINDOW_HEIGHT = 1000;
+    constexpr int WINDOW_WIDTH = 10000;
+    constexpr int WINDOW_HEIGHT = 10000;
     constexpr int INITIAL_HERBIVORES = 50;
     constexpr int INITIAL_CARNIVORES = 100;
     constexpr float TICKS_PER_SECOND = 100.f;
