@@ -186,6 +186,7 @@ public:
             entity->update();
             entity->move(*this);
             entity->reproduce(*this);
+            entity->killingHerbivores(*this, true);
         }
 
         collectDead();
@@ -205,6 +206,10 @@ public:
             }
             if (entity->species() == Species::Carnivore)
             {
+                --carnivoreCount;
+            }
+
+            if (entity->species() == Species::Carnivore) {
                 --carnivoreCount;
             }
 
@@ -229,10 +234,10 @@ public:
     [[nodiscard]] std::size_t herbivorePopulation() const noexcept { return herbivoreCount; }
     [[nodiscard]] std::size_t carnivorePopulation() const noexcept { return carnivoreCount; }
 
-
     [[nodiscard]] std::size_t populationOf(Species species) const noexcept
     {
         if (species == Species::Herbivore) return herbivoreCount;
+        if (species == Species::Carnivore) return carnivoreCount;
 
         return static_cast<std::size_t>(
             std::count_if(entities.begin(), entities.end(),
