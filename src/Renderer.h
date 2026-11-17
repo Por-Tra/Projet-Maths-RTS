@@ -13,7 +13,8 @@
 class Renderer
 {
     sf::RectangleShape background;
-    sf::VertexArray gridLines{sf::PrimitiveType::Lines};
+    sf::Texture backgroundTexture;
+    sf::Sprite backgroundSprite{backgroundTexture};
     sf::VertexArray entityTriangles{sf::PrimitiveType::Triangles};
 
     static constexpr int CIRCLE_SEGMENTS = 12; // 12 suffit largement a 10 px de rayon
@@ -27,38 +28,42 @@ public:
 
     void draw(sf::RenderWindow& window, const Grid& grid)
     {
-        window.draw(background);
-        window.draw(gridLines);
+        if (backgroundTexture.getSize().x > 0 && backgroundTexture.getSize().y > 0)
+        {
+            window.draw(backgroundSprite);
+        }
+        else
+        {
+            window.draw(background);
+        }
 
         buildEntityGeometry(grid);
         window.draw(entityTriangles);
     }
 
 private:
+
+    // Build the static geometry of the grid and background
     void buildStaticGeometry(const Grid& grid)
     {
         const float width = grid.pixelWidth();
         const float height = grid.pixelHeight();
 
         background.setSize(sf::Vector2f(width, height));
-        background.setFillColor(sf::Color::White);
         background.setPosition(sf::Vector2f(0.f, 0.f));
 
-        constexpr sf::Color lineColor(190, 190, 190);
+        // Create background with image texture
+        if (backgroundTexture.loadFromFile("asset/background.png"))
+        {
+            backgroundSprite.setTexture(backgroundTexture, true);
+            const sf::Vector2u textureSize = backgroundTexture.getSize();
+            backgroundSprite.setScale({
+                    width / static_cast<float>(textureSize.x),
+                    height / static_cast<float>(textureSize.y)
+                });
+            backgroundSprite.setPosition({0.f, 0.f});
+        }
 
-        gridLines.clear();
-        for (int x = 0; x <= grid.getCols(); ++x)
-        {
-            const float px = static_cast<float>(x) * Cell::CELL_SIZE;
-            gridLines.append(sf::Vertex{sf::Vector2f(px, 0.f), lineColor});
-            gridLines.append(sf::Vertex{sf::Vector2f(px, height), lineColor});
-        }
-        for (int y = 0; y <= grid.getRows(); ++y)
-        {
-            const float py = static_cast<float>(y) * Cell::CELL_SIZE;
-            gridLines.append(sf::Vertex{sf::Vector2f(0.f, py), lineColor});
-            gridLines.append(sf::Vertex{sf::Vector2f(width, py), lineColor});
-        }
     }
 
     void buildEntityGeometry(const Grid& grid)
@@ -77,6 +82,7 @@ private:
         }
     }
 
+    // Append a filled circle to the vertex array for entity representation
     void appendCircle(sf::Vector2f center, float radius, sf::Color color)
     {
         sf::Vector2f previous(center.x + radius, center.y);
