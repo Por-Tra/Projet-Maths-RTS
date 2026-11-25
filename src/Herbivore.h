@@ -10,8 +10,9 @@ class Herbivore : public Entity
 {
 public:
     static constexpr int MATURITY_AGE = 30;
-    static constexpr int REPRODUCTION_COOLDOWN = 30;
-    static constexpr int MAX_AGE = 300; // too old -> dies
+    static constexpr int REPRODUCTION_COOLDOWN = 15;
+    static constexpr int ELDERLY_THRESHOLD = 65;
+    static constexpr int MAX_AGE = 100; // guarranted death
 
 private:
     int age = 0;
@@ -31,7 +32,7 @@ public:
     {
         ++age;
         if (cooldown > 0) --cooldown;
-        if (age >= MAX_AGE) kill();
+        if (age >= ELDERLY_THRESHOLD) rollDeath();
     }
 
     //* ---- Rendering ----
@@ -53,6 +54,24 @@ public:
     [[nodiscard]] bool canReproduce() const noexcept { return isMature() && cooldown == 0; }
 
     [[nodiscard]] bool isAFemale() const { return isFemale; }
+
+    void rollDeath()
+    {
+        // Proportion d'âge "vécu" au-delà du seuil : 0.0 au seuil -> 1.0 à MAX_AGE
+        const float elderlyProgress =
+            static_cast<float>(age - ELDERLY_THRESHOLD) /
+            static_cast<float>(MAX_AGE - ELDERLY_THRESHOLD);
+
+        // Probabilité de mourir à ce cycle, bornée entre 0 et 1
+        const float deathChance = std::clamp(elderlyProgress, 0.0f, 1.0f);
+
+        // Tirage sur 0..999 pour avoir une précision de 0.1 %
+        const int roll = Random::inRange(0, 999);
+        if (static_cast<float>(roll) < deathChance * 1000.0f)
+        {
+            kill();
+        }
+    }
 
     //* ---- Reproducing ----
     void reproduce(Grid& grid) override
