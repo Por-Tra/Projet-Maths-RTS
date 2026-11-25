@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <cstddef>
 #include <fstream>
 
 #include "Application.h"
@@ -7,14 +9,16 @@
 
 namespace //Variables container
 {
-    constexpr int WINDOW_WIDTH = 10000;
-    constexpr int WINDOW_HEIGHT = 10000;
-    constexpr int INITIAL_HERBIVORES = 1000;
-    constexpr int INITIAL_CARNIVORES = 2000;
+    constexpr int WINDOW_WIDTH = 100000;
+    constexpr int WINDOW_HEIGHT = 100000;
+    constexpr int INITIAL_HERBIVORES = 10000;
+    constexpr int INITIAL_CARNIVORES = 20000;
     constexpr float TICKS_PER_SECOND = 50.0f;
 
     void seedPopulation(Grid& grid, int h_count, int c_count)
     {
+        grid.reserveEntities(static_cast<std::size_t>(std::max(0, h_count))
+                           + static_cast<std::size_t>(std::max(0, c_count)));
         // Herbivores
         int h_placed = 0;
         int h_guard = 0;

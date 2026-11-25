@@ -17,6 +17,10 @@
 #include "Entity.h"
 #include "Random.h"
 
+#if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX86))
+#include <xmmintrin.h>
+#endif
+
 class Grid
 {
     int cols{0};
@@ -33,6 +37,53 @@ class Grid
     {
         return static_cast<std::size_t>(position.y) * static_cast<std::size_t>(cols)
              + static_cast<std::size_t>(position.x);
+    }
+
+    template<class Visitor>
+    bool visitNeighbourCells(sf::Vector2i origin, Visitor&& visit) const
+    {
+        if (bounds(origin))
+        {
+            const std::size_t cellIndex = index(origin);
+            const auto stride = static_cast<std::size_t>(cols);
+            // Preserve the up/down/left/right order and stop on the first match.
+            if (origin.y > 0 && visit(cells[cellIndex - stride], 0)) return true;
+            if (origin.y + 1 < rows && visit(cells[cellIndex + stride], 1)) return true;
+            if (origin.x > 0 && visit(cells[cellIndex - 1], 2)) return true;
+            if (origin.x + 1 < cols && visit(cells[cellIndex + 1], 3)) return true;
+        }
+        else
+        {
+            for (int i = 0; i < 4; ++i)
+            {
+                const auto candidate = origin + neighbourhood()[i];
+                if (bounds(candidate) && visit(cells[index(candidate)], i)) return true;
+            }
+        }
+        return false;
+    }
+
+    static void prefetchCell(const Cell* cell) noexcept
+    {
+#if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX86))
+        _mm_prefetch(reinterpret_cast<const char*>(cell), _MM_HINT_T0);
+#elif defined(__GNUC__) || defined(__clang__)
+        __builtin_prefetch(cell, 0, 3);
+#else
+        (void)cell;
+#endif
+    }
+
+    void prefetchNeighbourhood(sf::Vector2i origin) const noexcept
+    {
+        if (!bounds(origin)) return;
+        const auto cellIndex = index(origin);
+        const auto stride = static_cast<std::size_t>(cols);
+        prefetchCell(&cells[cellIndex]);
+        if (origin.y > 0) prefetchCell(&cells[cellIndex - stride]);
+        if (origin.y + 1 < rows) prefetchCell(&cells[cellIndex + stride]);
+        if (origin.x > 0) prefetchCell(&cells[cellIndex - 1]);
+        if (origin.x + 1 < cols) prefetchCell(&cells[cellIndex + 1]);
     }
 
 public:
@@ -80,7 +131,9 @@ public:
 
     [[nodiscard]] bool bounds(sf::Vector2i position) const noexcept
     {
-        return position.x >= 0 && position.x < cols && position.y >= 0 && position.y < rows;
+        // Negative coordinates also fail these unsigned comparisons.
+        return static_cast<unsigned>(position.x) < static_cast<unsigned>(cols)
+            && static_cast<unsigned>(position.y) < static_cast<unsigned>(rows);
     }
 
     // ---- Cells Management ----
@@ -113,8 +166,19 @@ public:
         return bounds(position) && cells[index(position)].isEmpty();
     }
 
+    template<class Visitor>
+    bool visitOccupiedNeighbours(sf::Vector2i origin, Visitor&& visit) const
+    {
+        return visitNeighbourCells(origin, [&](const Cell& cell, int) {
+            Entity* entity = cell.getContent();
+            return entity != nullptr && visit(entity);
+        });
+    }
+
     //* Birth / Movement / Death
     // *----------------------------------------------------------------------------
+
+    void reserveEntities(std::size_t count) { entities.reserve(count); }
 
     template <typename T, typename... Args>
     T* spawn(sf::Vector2i position, Args&&... args)
@@ -123,18 +187,21 @@ public:
 
         auto owned = std::make_unique<T>(std::forward<Args>(args)...);
         T* raw = owned.get();
+        const Species species = raw->species();
+        entities.push_back(std::move(owned));
         ++birthCount;
-        if (raw->species() == Species::Herbivore) 
+        if (species == Species::Herbivore)
         {
             ++herbivoreCount;
         }
 
-        if (raw->species() == Species::Carnivore) {
+        else if (species == Species::Carnivore) {
             ++carnivoreCount;
         }
 
-        entities.push_back(std::move(owned));
-        placeAt(position, raw);
+        // isFree above has already validated this cell.
+        cells[index(position)].setContent(raw);
+        raw->setPosition(position);
         return raw;
     }
 
@@ -152,78 +219,86 @@ public:
         if (!bounds(from) || !isFree(to)) return;
 
         Entity* entity = cells[index(from)].clearContent();
-        placeAt(to, entity);
+        // isFree above has already validated the destination.
+        cells[index(to)].setContent(entity);
+        if (entity) entity->setPosition(to);
     }
 
 
     [[nodiscard]] std::optional<sf::Vector2i> randomFreeNeighbour(sf::Vector2i origin) const
     {
-        std::array<sf::Vector2i, 4> freeCells{};
+        std::array<int, 4> freeDirections;
         int count = 0;
 
-        for (const sf::Vector2i& direction : neighbourhood())
-        {
-            const sf::Vector2i candidate = origin + direction;
-            if (isFree(candidate)) freeCells[static_cast<std::size_t>(count++)] = candidate;
-        }
+        visitNeighbourCells(origin, [&](const Cell& cell, int direction) {
+            if (cell.isEmpty()) freeDirections[count++] = direction;
+            return false;
+        });
 
         if (count == 0) return std::nullopt;
-        return freeCells[static_cast<std::size_t>(Random::inRange(0, count - 1))];
+        return origin + neighbourhood()[freeDirections[Random::inRange(0, count - 1)]];
     }
 
     void step()
     {
-        // Froze the number of entities before the loop:
-        // Babies will be added at the of the vector and will act
+        // Freeze the actor count: newborns first act on the next step.
 
         const std::size_t actorCount = entities.size();
+        constexpr std::size_t PREFETCH_DISTANCE = 16;
+        // Small grids already fit in cache; look ahead only on large worlds.
+        const bool prefetch = cells.size() > 1024 * 1024;
 
         for (std::size_t i = 0; i < actorCount; ++i)
         {
+            if (prefetch && actorCount - i > PREFETCH_DISTANCE)
+                prefetchNeighbourhood(entities[i + PREFETCH_DISTANCE]->getPosition());
             Entity* entity = entities[i].get();
             if (!entity->isAlive()) continue;
 
             entity->update();
+            if (!entity->isAlive()) continue;
+
             entity->move(*this);
             entity->reproduce(*this);
             entity->killingHerbivores(*this, false);
         }
 
-        collectDead();
+        collectDead(); //& step of killing
     }
 
     // Remove dead entities
     void collectDead()
     {
-        for (const std::unique_ptr<Entity>& entity : entities)
+        auto write = entities.begin();  // Write pointer for the next alive entity
+        for (auto read = entities.begin(); read != entities.end(); ++read)
         {
-            if (entity->isAlive()) continue;
-
-            ++deathCount;
-            if (entity->species() == Species::Herbivore) 
+            std::unique_ptr<Entity>& entity = *read;    // Reference to the current entity
+            if (!entity->isAlive())
             {
-                --herbivoreCount;
-            }
-            if (entity->species() == Species::Carnivore)
-            {
-                --carnivoreCount;
+                ++deathCount;
+                const Species species = entity->species();
+                if (species == Species::Herbivore)
+                {
+                    --herbivoreCount;
+                }
+                else if (species == Species::Carnivore)
+                {
+                    --carnivoreCount;
+                }
+
+                const sf::Vector2i position = entity->getPosition();
+                if (bounds(position) && cells[index(position)].getContent() == entity.get())
+                {
+                    cells[index(position)].clearContent();
+                }
+                continue;
             }
 
-            if (entity->species() == Species::Carnivore) {
-                --carnivoreCount;
-            }
-
-            const sf::Vector2i position = entity->getPosition();
-            if (bounds(position) && cells[index(position)].getContent() == entity.get())
-            {
-                cells[index(position)].clearContent();
-            }
+            if (write != read) *write = std::move(entity);
+            ++write;
         }
 
-        entities.erase(
-            std::remove_if(entities.begin(), entities.end(),
-                           [](const std::unique_ptr<Entity>& entity) { return !entity->isAlive(); }),
-            entities.end());
+        entities.erase(write, entities.end());
     }
 
     //* ---- Stats ----
@@ -262,13 +337,10 @@ public:
     }
 };
 
-//! Dont touch pls
 inline void Entity::move(Grid& grid) const {
     const sf::Vector2i target = chooseDirection(grid);
-    if (target != position && grid.bounds(target))
-    {
-        grid.moveEntity(position, target);
-    }
+    // moveEntity already validates the source and destination.
+    grid.moveEntity(position, target);
 }
 
 #endif // GRID_H

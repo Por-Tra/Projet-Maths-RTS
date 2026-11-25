@@ -1,24 +1,24 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
-#include <cmath>
-#include <memory>
-
+#include <algorithm>
 #include <SFML/Graphics.hpp>
 
 #include "Cell.h"
 #include "Entity.h"
 #include "Grid.h"
+#include "EntityGeometry.h"
 
 class Renderer
 {
     sf::RectangleShape background;
     sf::Texture backgroundTexture;
     sf::Sprite backgroundSprite{backgroundTexture};
-    sf::VertexArray entityTriangles{sf::PrimitiveType::Triangles};
-
-    static constexpr int CIRCLE_SEGMENTS = 4; // 12 suffit largement a 10 px de rayon
-    static constexpr float RADIUS_RATIO = 0.35f;
+    EntityGeometry entityGeometry;
+    sf::VertexBuffer gpuGeometry{sf::PrimitiveType::Triangles, sf::VertexBuffer::Usage::Stream};
+    bool hasGeometry = false;
+    bool useVertexBuffer = true;
+    bool gpuReady = false;
 
 public:
     explicit Renderer(const Grid& grid)
@@ -26,7 +26,7 @@ public:
         buildStaticGeometry(grid);
     }
 
-    void draw(sf::RenderWindow& window, const Grid& grid)
+    void draw(sf::RenderTarget& window, const Grid& grid, bool entitiesChanged = true)
     {
         if (backgroundTexture.getSize().x > 0 && backgroundTexture.getSize().y > 0)
         {
@@ -37,11 +37,39 @@ public:
             window.draw(background);
         }
 
-        buildEntityGeometry(grid);
-        window.draw(entityTriangles);
+        if (entitiesChanged || !hasGeometry)
+        {
+            entityGeometry.rebuild(grid);
+            uploadGeometry();
+            hasGeometry = true;
+        }
+        const auto& vertices = entityGeometry.getVertices();
+        if (!vertices.empty())
+        {
+            if (gpuReady) window.draw(gpuGeometry, 0, vertices.size());
+            else window.draw(vertices.data(), vertices.size(), sf::PrimitiveType::Triangles);
+        }
     }
 
 private:
+
+    void uploadGeometry()
+    {
+        gpuReady = false;
+        const auto& vertices = entityGeometry.getVertices();
+        if (vertices.empty() || !useVertexBuffer) return;
+
+        useVertexBuffer = sf::VertexBuffer::isAvailable();
+        if (!useVertexBuffer) return;
+
+        const auto capacity = gpuGeometry.getVertexCount();
+        if (capacity < vertices.size())
+            useVertexBuffer = gpuGeometry.create(std::max(vertices.size(), capacity + capacity / 2));
+
+        if (useVertexBuffer) gpuReady = gpuGeometry.update(vertices.data(), vertices.size(), 0);
+        // Keep the CPU drawing path if allocation/upload is unavailable.
+        if (!gpuReady) useVertexBuffer = false;
+    }
 
     // Build the static geometry of the grid and background
     void buildStaticGeometry(const Grid& grid)
@@ -66,40 +94,6 @@ private:
 
     }
 
-    void buildEntityGeometry(const Grid& grid)
-    {
-        entityTriangles.clear();
-
-        for (const std::unique_ptr<Entity>& entity : grid.getEntities())
-        {
-            const sf::Vector2i cell = entity->getPosition();
-
-            const sf::Vector2f center(
-                (static_cast<float>(cell.x) + 0.5f) * Cell::CELL_SIZE,
-                (static_cast<float>(cell.y) + 0.5f) * Cell::CELL_SIZE);
-
-            appendCircle(center, Cell::CELL_SIZE * RADIUS_RATIO, entity->color());
-        }
-    }
-
-    // Append a filled circle to the vertex array for entity representation
-    void appendCircle(sf::Vector2f center, float radius, sf::Color color)
-    {
-        sf::Vector2f previous(center.x + radius, center.y);
-
-        for (int i = 1; i <= CIRCLE_SEGMENTS; ++i)
-        {
-            constexpr float TWO_PI = 6.28318530718f;
-            const float angle = TWO_PI * static_cast<float>(i) / static_cast<float>(CIRCLE_SEGMENTS);
-            const sf::Vector2f current(center.x + radius * std::cos(angle), center.y + radius * std::sin(angle));
-
-            entityTriangles.append(sf::Vertex{center, color});
-            entityTriangles.append(sf::Vertex{previous, color});
-            entityTriangles.append(sf::Vertex{current, color});
-
-            previous = current;
-        }
-    }
 };
 
 #endif // RENDERER_H
