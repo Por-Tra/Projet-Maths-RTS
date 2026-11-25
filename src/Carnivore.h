@@ -24,11 +24,15 @@ private:
     int age = 0;
     int cooldown = 0; // 0 = ready to reproduce
     float satietyLevel = MAX_SATIETY_LEVEL;
+    bool isFemale = false; // Either a male or a female
 
 public:
     explicit Carnivore(std::string entityName = "Carnivore")
         : Entity(std::move(entityName))
     {
+        // Rolling Male / Female
+        const int maleFemaleRandom = Random::inRange(0, 1);
+        isFemale = maleFemaleRandom == 1;
     }
 
     void update() override
@@ -59,6 +63,8 @@ public:
 
     [[nodiscard]] bool isMature() const noexcept { return age >= MATURITY_AGE; }
     [[nodiscard]] bool canReproduce() const noexcept { return isMature() && cooldown == 0; }
+
+    [[nodiscard]] bool isAFemale() const { return isFemale; }
 
     //* ---- Satiety Level Management ----
 
@@ -91,6 +97,7 @@ public:
 
             auto* partner = dynamic_cast<Carnivore*>(neighbour);
             if (!partner->canReproduce()) continue;
+            if (isAFemale() == partner->isAFemale()) continue;
 
             // Chance de reproduction = satiété moyenne du couple (0% affamés -> 100% rassasiés)
             const float reproductionChance = (satietyRatio() + partner->satietyRatio()) * 0.5f;
