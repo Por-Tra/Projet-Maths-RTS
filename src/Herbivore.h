@@ -16,11 +16,22 @@ public:
 private:
     int age = 0;
     int cooldown = 0; // 0 = ready to reproduce
+    bool isFemale = false; // Either a male or a female
 
 public:
     explicit Herbivore(std::string entityName = "Herbivore")
         : Entity(std::move(entityName))
     {
+        // Rolling Male / Female
+        const int maleFemaleRandom = Random::inRange(0, 1);
+        isFemale = maleFemaleRandom == 1;
+    }
+
+    void update() override
+    {
+        ++age;
+        if (cooldown > 0) --cooldown;
+        if (age >= MAX_AGE) kill();
     }
 
     //* ---- Rendering ----
@@ -41,12 +52,7 @@ public:
     [[nodiscard]] bool isMature() const noexcept { return age >= MATURITY_AGE; }
     [[nodiscard]] bool canReproduce() const noexcept { return isMature() && cooldown == 0; }
 
-    void update() override
-    {
-        ++age;
-        if (cooldown > 0) --cooldown;
-        if (age >= MAX_AGE) kill();
-    }
+    [[nodiscard]] bool isAFemale() const { return isFemale; }
 
     //* ---- Reproducing ----
     void reproduce(Grid& grid) override
@@ -62,6 +68,7 @@ public:
 
             auto* partner = dynamic_cast<Herbivore*>(neighbour);
             if (!partner->canReproduce()) continue;
+            if (isAFemale() == partner->isAFemale()) continue;
 
             const std::optional<sf::Vector2i> cradle = grid.randomFreeNeighbour(position);
             if (!cradle) return; // pas de place autour : ce sera pour un autre tour
