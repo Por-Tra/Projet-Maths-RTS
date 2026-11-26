@@ -10,17 +10,29 @@ class Herbivore : public Entity
 {
 public:
     static constexpr int MATURITY_AGE = 30;
-    static constexpr int REPRODUCTION_COOLDOWN = 30;
-    static constexpr int MAX_AGE = 300; // too old -> dies
+    static constexpr int REPRODUCTION_COOLDOWN = 15;
+    static constexpr int ELDERLY_THRESHOLD = 65;
+    static constexpr int MAX_AGE = 100; // guarranted death
 
 private:
     int age = 0;
     int cooldown = 0; // 0 = ready to reproduce
+    bool isFemale = false; // Either a male or a female
 
 public:
     explicit Herbivore(std::string entityName = "Herbivore")
         : Entity(std::move(entityName))
     {
+        // Rolling Male / Female
+        const int maleFemaleRandom = Random::inRange(0, 1);
+        isFemale = maleFemaleRandom == 1;
+    }
+
+    void update() override
+    {
+        ++age;
+        if (cooldown > 0) --cooldown;
+        if (age >= ELDERLY_THRESHOLD) rollDeath();
     }
 
     //* ---- Rendering ----
@@ -41,11 +53,24 @@ public:
     [[nodiscard]] bool isMature() const noexcept { return age >= MATURITY_AGE; }
     [[nodiscard]] bool canReproduce() const noexcept { return isMature() && cooldown == 0; }
 
-    void update() override
+    [[nodiscard]] bool isAFemale() const { return isFemale; }
+
+    void rollDeath()
     {
-        ++age;
-        if (cooldown > 0) --cooldown;
-        if (age >= MAX_AGE) kill();
+        // Proportion d'âge "vécu" au-delà du seuil : 0.0 au seuil -> 1.0 à MAX_AGE
+        const float elderlyProgress =
+            static_cast<float>(age - ELDERLY_THRESHOLD) /
+            static_cast<float>(MAX_AGE - ELDERLY_THRESHOLD);
+
+        // Probabilité de mourir à ce cycle, bornée entre 0 et 1
+        const float deathChance = std::clamp(elderlyProgress, 0.0f, 1.0f);
+
+        // Tirage sur 0..999 pour avoir une précision de 0.1 %
+        const int roll = Random::inRange(0, 999);
+        if (static_cast<float>(roll) < deathChance * 1000.0f)
+        {
+            kill();
+        }
     }
 
     //* ---- Reproducing ----
@@ -58,6 +83,7 @@ public:
 
             auto* partner = dynamic_cast<Herbivore*>(neighbour);
             if (!partner->canReproduce()) return false;
+            if (isAFemale() == partner->isAFemale()) return false;
 
             const std::optional<sf::Vector2i> cradle = grid.randomFreeNeighbour(position);
             if (!cradle) return true; // no room: stop searching this tick

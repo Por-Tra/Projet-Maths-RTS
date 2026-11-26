@@ -13,7 +13,9 @@ class Carnivore : public Entity
 {
 public:
     static constexpr int MATURITY_AGE = 100;
-    static constexpr int REPRODUCTION_COOLDOWN = 30;
+    static constexpr int REPRODUCTION_COOLDOWN = 60;
+    static constexpr int ELDERLY_THRESHOLD = 150;
+    static constexpr int MAX_AGE = 250; // guarranted death
 
     // Satiety
     static constexpr float MIN_SATIETY_LEVEL = 0.0f;
@@ -26,11 +28,15 @@ private:
     int age = 0;
     int cooldown = 0; // 0 = ready to reproduce
     float satietyLevel = MAX_SATIETY_LEVEL;
+    bool isFemale = false; // Either a male or a female
 
 public:
     explicit Carnivore(std::string entityName = "Carnivore")
         : Entity(std::move(entityName))
     {
+        // Rolling Male / Female
+        const int maleFemaleRandom = Random::inRange(0, 1);
+        isFemale = maleFemaleRandom == 1;
     }
 
     void update() override
@@ -42,6 +48,8 @@ public:
         if (satietyLevel == MIN_SATIETY_LEVEL) { // Dies to hunger
             kill();
         }
+
+        if (age >= ELDERLY_THRESHOLD) rollDeath();
     }
 
     //* ---- Rendering ----
@@ -62,6 +70,8 @@ public:
     [[nodiscard]] bool isMature() const noexcept { return age >= MATURITY_AGE; }
     [[nodiscard]] bool canReproduce() const noexcept { return isMature() && cooldown == 0; }
 
+    [[nodiscard]] bool isAFemale() const { return isFemale; }
+
     //* ---- Satiety Level Management ----
 
     void gainSatiety(const float value) {
@@ -79,6 +89,24 @@ public:
     [[nodiscard]] bool isAbleToConsume() const { return satietyLevel >= SATIETY_CONSUME_THRESHOLD; }
     [[nodiscard]] float satietyRatio() const noexcept { return satietyLevel / MAX_SATIETY_LEVEL; } // 0.0 -> 1.0
 
+    void rollDeath()
+    {
+        // Proportion d'âge "vécu" au-delà du seuil : 0.0 au seuil -> 1.0 à MAX_AGE
+        const float elderlyProgress =
+            static_cast<float>(age - ELDERLY_THRESHOLD) /
+            static_cast<float>(MAX_AGE - ELDERLY_THRESHOLD);
+
+        // Probabilité de mourir à ce cycle, bornée entre 0 et 1
+        const float deathChance = std::clamp(elderlyProgress, 0.0f, 1.0f);
+
+        // Tirage sur 0..999 pour avoir une précision de 0.1 %
+        const int roll = Random::inRange(0, 999);
+        if (static_cast<float>(roll) < deathChance * 1000.0f)
+        {
+            kill();
+        }
+    }
+
     //* ---- Reproducing ----
     void reproduce(Grid& grid) override
     {
@@ -89,6 +117,7 @@ public:
 
             auto* partner = dynamic_cast<Carnivore*>(neighbour);
             if (!partner->canReproduce()) return false;
+            if (isAFemale() == partner->isAFemale()) return false;
 
             // Chance de reproduction = satiété moyenne du couple (0% affamés -> 100% rassasiés)
             const float reproductionChance = (satietyRatio() + partner->satietyRatio()) * 0.5f;
