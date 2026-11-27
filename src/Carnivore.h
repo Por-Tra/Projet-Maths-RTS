@@ -15,7 +15,7 @@ public:
     static constexpr int MATURITY_AGE = 100;
     static constexpr int REPRODUCTION_COOLDOWN = 60;
     static constexpr int ELDERLY_THRESHOLD = 150;
-    static constexpr int MAX_AGE = 250; // guarranted death
+    static constexpr int MAX_AGE = 7000; // guarranted death
 
     // Satiety
     static constexpr float MIN_SATIETY_LEVEL = 0.0f;

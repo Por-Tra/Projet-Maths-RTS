@@ -30,6 +30,9 @@ class Grid
     std::vector<std::unique_ptr<Entity>> entities;
     std::size_t birthCount{0};
     std::size_t deathCount{0};
+    // Indexes par Species : herbivores, carnivores, plantes.
+    std::array<std::size_t, 3> birthsBySpecies{};
+    std::array<std::size_t, 3> deathsBySpecies{};
     std::size_t herbivoreCount{0};
     std::size_t carnivoreCount{0};
 
@@ -190,6 +193,7 @@ public:
         const Species species = raw->species();
         entities.push_back(std::move(owned));
         ++birthCount;
+        ++birthsBySpecies[static_cast<std::size_t>(species)];
         if (species == Species::Herbivore)
         {
             ++herbivoreCount;
@@ -277,6 +281,7 @@ public:
             {
                 ++deathCount;
                 const Species species = entity->species();
+                ++deathsBySpecies[static_cast<std::size_t>(species)];
                 if (species == Species::Herbivore)
                 {
                     --herbivoreCount;
@@ -306,6 +311,14 @@ public:
     [[nodiscard]] std::size_t population() const noexcept { return entities.size(); }
     [[nodiscard]] std::size_t births() const noexcept { return birthCount; }
     [[nodiscard]] std::size_t deaths() const noexcept { return deathCount; }
+    [[nodiscard]] std::size_t birthsOf(Species species) const noexcept
+    {
+        return birthsBySpecies[static_cast<std::size_t>(species)];
+    }
+    [[nodiscard]] std::size_t deathsOf(Species species) const noexcept
+    {
+        return deathsBySpecies[static_cast<std::size_t>(species)];
+    }
     [[nodiscard]] std::size_t herbivorePopulation() const noexcept { return herbivoreCount; }
     [[nodiscard]] std::size_t carnivorePopulation() const noexcept { return carnivoreCount; }
 

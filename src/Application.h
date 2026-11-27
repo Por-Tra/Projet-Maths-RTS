@@ -14,6 +14,7 @@
 #include "Renderer.h"
 #include "tools.h"
 #include "Graph.h"
+#include "StatsPanel.h"
 
 /*
  * Application handle the main loop of the game: event -> simulation -> render
@@ -34,8 +35,9 @@ class Application
     int timeStep{0};
     Grid& grid;
     Renderer renderer;
-    Graph graph{grid, GraphType::ExponentialPopulationWithMortality};
+    Graph graph{grid, GraphType::LotkaVolterra};
     Diagram diagram{grid};
+    StatsPanel statsPanel{grid};
     sf::RenderWindow window;
     sf::View gameView;
     sf::Time tickDuration;
@@ -83,6 +85,7 @@ public:
                 if (!paused)
                 {
                     grid.step();
+                    statsPanel.update(grid);
                     entitiesChanged = true;
                     appendCsvLine(csvFile, ++timeStep, grid);
                     graph.update(static_cast<float>(timeStep));
@@ -98,6 +101,7 @@ public:
             {
                 window.setView(gameView);
                 renderer.draw(window, grid, entitiesChanged);
+                statsPanel.draw(window, timeStep, paused);
                 entitiesChanged = false;
             }
             else if (currentTab == Tab::Graph)
