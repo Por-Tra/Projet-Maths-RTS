@@ -2,6 +2,7 @@
 #define MATHS_FORMULAS_H
 
 #include <cmath>
+#include <limits>
 
 // MathsFormulas contains mathematical formulas used to verify if simulation is mathematically correct
 // Usage: MathsFormulas::exp_population_without_mortality(...)
@@ -27,12 +28,59 @@ public:
     //* Herbivore and carnivore population case
     //*--------------------------------------------------------------------------------------
 
-    // Lotka-Volterra equation for the herbivore population
-    // The H population represents the prey (e.g. herbivores)
-    // The C population represents the predators (e.g. carnivores)
+    struct Populations
+    {
+        double herbivores;
+        double carnivores;
+    };
 
-    static float lotka_volterra(float population_herbivore, float population_carnivore, float taux_croissance_herbivore, float taux_mortalite_carnivore, float temps) {
-        return population_herbivore * std::exp(taux_croissance_herbivore * temps) - (population_herbivore * population_carnivore * taux_mortalite_carnivore * temps);
+    struct LotkaVolterraRates
+    {
+        double herbivoreGrowth;
+        double predation;
+        double carnivoreMortality;
+        double carnivoreGrowthFromPrey;
+    };
+
+    // dH/dt = H * (a - b*C), dC/dt = C * (d*H - c).
+    static Populations lotka_volterra(Populations population, const LotkaVolterraRates& rates, double elapsed)
+    {
+        
+        constexpr int MAX_STEPS = 16384;    //? Limite le nombre de pas de temps pour éviter les calculs trop longs.
+        const double invalid = std::numeric_limits<double>::quiet_NaN();    //? Valeur de retour pour signaler 
+                                                                            //? une divergence ou un problème numérique.
+
+
+        if (!std::isfinite(population.herbivores) || !std::isfinite(population.carnivores) || !std::isfinite(elapsed) || elapsed < 0.0)
+            return {invalid, invalid};
+
+        if (elapsed == 0.0) return population;
+
+        //& Cas sans interaction, calculables directement quel que soit le temps ecoule.
+        if (population.herbivores == 0.0)
+            return {0.0, population.carnivores * std::exp(-rates.carnivoreMortality * elapsed)};
+        if (population.carnivores == 0.0)
+            return {population.herbivores * std::exp(rates.herbivoreGrowth * elapsed), 0.0};
+
+        //& Borne le travail en cas de saut de temps anormal. En jeu, elapsed vaut un pas.
+        if (elapsed > MAX_STEPS) return {invalid, invalid};
+        const int steps = static_cast<int>(std::ceil(elapsed));
+        const double dt = elapsed / steps;
+
+
+        for (int i = 0; i < steps; ++i)
+        {
+            //& Demi-pas des herbivores, pas des carnivores, demi-pas des herbivores.
+            //& Chaque sous-pas garde l'autre population fixe et conserve la positivite.
+            const double midHerbivores = population.herbivores * std::exp((rates.herbivoreGrowth - rates.predation * population.carnivores) * dt / 2.0);
+            population.carnivores *= std::exp((rates.carnivoreGrowthFromPrey * midHerbivores - rates.carnivoreMortality) * dt);
+            population.herbivores = midHerbivores * std::exp((rates.herbivoreGrowth - rates.predation * population.carnivores) * dt / 2.0);
+            
+            //& Si une population devient non finie, on considere que le modele diverge.
+            if (!std::isfinite(population.herbivores) || !std::isfinite(population.carnivores))
+                return {invalid, invalid};
+        }
+        return population;
     }
 
     //*--------------------------------------------------------------------------------------

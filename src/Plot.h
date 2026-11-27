@@ -1,33 +1,18 @@
 #ifndef PLOT_H
 #define PLOT_H
 
-#if defined(_WIN32)
-    #ifndef NOMINMAX
-        #define NOMINMAX
-    #endif
-    #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN
-    #endif
-    #include <windows.h>
-#elif defined(__APPLE__)
-    #include <mach-o/dyld.h>
-#endif
-
 #include <algorithm>
 #include <cmath>
-#include <cstdint>
-#include <cstdlib>
-#include <filesystem>
 #include <iomanip>
-#include <iostream>
 #include <locale>
 #include <sstream>
 #include <string>
-#include <system_error>
 #include <utility>
 #include <vector>
 
 #include <SFML/Graphics.hpp>
+
+#include "ProjectFont.h"
 
 // Fonctions communes aux graphiques : police, axes, echelle, legende et zoom.
 class Plot
@@ -44,19 +29,8 @@ public:
     struct LegendEntry { std::string label; sf::Color color; };
 
     explicit Plot(const std::string& fontPath = "")
+        : hasFont(ProjectFont::load(font, fontPath))
     {
-        std::error_code error;
-        for (const auto& path : fontCandidates(fontPath))
-        {
-            if (std::filesystem::is_regular_file(path, error) && font.openFromFile(path))
-            {
-                hasFont = true;
-                break;
-            }
-        }
-        if (!hasFont)
-            std::cerr << "[Plot] Police introuvable : asset/" << FONT_FILE
-                      << ". Indiquez son chemin via GRAPH_FONT.\n";
     }
 
     void resetZoom() noexcept { automatic = true; }
@@ -143,7 +117,6 @@ public:
     }
 
 private:
-    static constexpr const char* FONT_FILE = "Lato-Bold.ttf";
     static constexpr unsigned TICK_SIZE = 11;
     static constexpr float LEGEND_SPACING = 20.f;
 
@@ -151,60 +124,6 @@ private:
     bool hasFont{false};
     bool automatic{true};
     Range zoomRange;
-
-    // Police du projet, cherchee depuis l'executable et le repertoire courant.
-    static std::filesystem::path executableDir()
-    {
-        namespace fs = std::filesystem;
-#if defined(_WIN32)
-        std::wstring buffer(MAX_PATH, L'\0');
-        for (;;)
-        {
-            const DWORD length = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
-            if (length == 0) return {};
-            if (length < buffer.size())
-            {
-                buffer.resize(length);
-                return fs::path(buffer).parent_path();
-            }
-            buffer.resize(buffer.size() * 2);
-        }
-#elif defined(__APPLE__)
-        std::uint32_t size = 0;
-        _NSGetExecutablePath(nullptr, &size);
-        std::string buffer(size, '\0');
-        if (_NSGetExecutablePath(buffer.data(), &size) != 0) return {};
-        std::error_code error;
-        return fs::weakly_canonical(fs::path(buffer.c_str()), error).parent_path();
-#else
-        std::error_code error;
-        return fs::read_symlink("/proc/self/exe", error).parent_path();
-#endif
-    }
-
-    static std::vector<std::filesystem::path> fontCandidates(const std::string& explicitPath)
-    {
-        namespace fs = std::filesystem;
-        std::vector<fs::path> paths;
-        if (!explicitPath.empty()) paths.emplace_back(explicitPath);
-        if (const char* path = std::getenv("GRAPH_FONT")) paths.emplace_back(path);
-#ifdef ASSET_DIR
-        paths.push_back(fs::path(ASSET_DIR) / FONT_FILE);
-#endif
-        std::error_code error;
-        for (const fs::path& root : {executableDir(), fs::current_path(error)})
-        {
-            fs::path directory = root;
-            for (int depth = 0; depth < 5 && !directory.empty(); ++depth)
-            {
-                paths.push_back(directory / "asset" / FONT_FILE);
-                const fs::path parent = directory.parent_path();
-                if (parent == directory) break;
-                directory = parent;
-            }
-        }
-        return paths;
-    }
 
     // Echelle et cadrage.
     static double niceStep(double span, int target)

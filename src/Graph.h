@@ -13,7 +13,7 @@
 
 enum class GraphType { ExponentialPopulationWithMortality, LotkaVolterra };
 
-// Population observee et, selon le modele, population theorique au cours du temps.
+// Herbivores et carnivores simules, compares aux effectifs theoriques.
 class Graph
 {
 public:
@@ -32,20 +32,28 @@ public:
 
     void update(float time)
     {
-        if (!std::isfinite(time) || time < 0.f) return;
-        if (!samples.empty() && time <= samples.back().time) return;
+        if (!std::isfinite(time) || time < 0.f || time <= lastTime) return;
 
-        const float population = static_cast<float>(grid.herbivorePopulation());
-        if (samples.empty()) initialPopulation = population;
+        const float herbivores = static_cast<float>(grid.herbivorePopulation());
+        const float carnivores = static_cast<float>(grid.carnivorePopulation());
+        if (lastTime < 0.f)
+        {
+            initialHerbivores = herbivores;
+            initialTime = time;
+            theoretical = {herbivores, carnivores};
+            modelRates = lotkaVolterraRates(theoretical);
+        }
+        else if (type == GraphType::LotkaVolterra)
+        {
+            theoretical = MathsFormulas::lotka_volterra(theoretical, modelRates, static_cast<double>(time) - lastTime);
+        }
+        lastTime = time;
 
+        // Le modele avance a chaque pas, meme si le graphique saute des echantillons.
         ++sampleCounter;
         if (sampleCounter % sampleStride != 0) return;
 
-        const float prediction = hasFormula()
-            ? MathsFormulas::exp_population_with_mortality(
-                initialPopulation, GROWTH_RATE, MORTALITY_RATE, time)
-            : population;
-        samples.push_back({time, population, prediction});
+        samples.push_back({time, herbivores, carnivores, prediction(time - initialTime)});
         if (samples.size() > MAX_SAMPLES) compactSamples();
     }
 
@@ -53,8 +61,12 @@ public:
     {
         plot.draw(target, dataRange(), legend(), "Temps (pas de simulation)", "Population",
             [&](const sf::FloatRect& bounds, const Plot::Range& range) {
-                if (hasFormula()) drawCurve(target, bounds, range, true);
-                drawCurve(target, bounds, range, false);
+                // La simulation reste au premier plan si les courbes se croisent.
+                drawCurve(target, bounds, range, Curve::PredictedHerbivores, PREDICTED_HERBIVORE_COLOR);
+                if (type == GraphType::LotkaVolterra)
+                    drawCurve(target, bounds, range, Curve::PredictedCarnivores, PREDICTED_CARNIVORE_COLOR);
+                drawCurve(target, bounds, range, Curve::Herbivores, HERBIVORE_COLOR);
+                drawCurve(target, bounds, range, Curve::Carnivores, CARNIVORE_COLOR);
             });
     }
 
@@ -62,33 +74,62 @@ private:
     static constexpr std::size_t MAX_SAMPLES = 2000;
     static constexpr float GROWTH_RATE = 0.10f;
     static constexpr float MORTALITY_RATE = 0.03f;
-    inline static const sf::Color OBSERVED_COLOR = sf::Color::Blue;
-    inline static const sf::Color FORMULA_COLOR = sf::Color::Red;
+    inline static const sf::Color HERBIVORE_COLOR = sf::Color::Blue;
+    inline static const sf::Color CARNIVORE_COLOR = sf::Color::Red;
+    inline static const sf::Color PREDICTED_HERBIVORE_COLOR{105, 64, 145};
+    inline static const sf::Color PREDICTED_CARNIVORE_COLOR{0, 119, 79};
+
+    enum class Curve { Herbivores, Carnivores, PredictedHerbivores, PredictedCarnivores };
 
     struct Sample
     {
         float time;
-        float observed;
-        float predicted;
+        float herbivores;
+        float carnivores;
+        MathsFormulas::Populations predicted;
     };
 
     Grid& grid;
     GraphType type;
     Plot plot;
     std::vector<Sample> samples;
-    float initialPopulation{0.f};
+    float initialHerbivores{0.f};
+    float initialTime{0.f};
+    float lastTime{-1.f};
+    MathsFormulas::Populations theoretical{};
+    MathsFormulas::LotkaVolterraRates modelRates{};
     std::size_t sampleStride{1};
     std::size_t sampleCounter{0};
 
-    bool hasFormula() const noexcept
+    static MathsFormulas::LotkaVolterraRates lotkaVolterraRates(MathsFormulas::Populations initial)
     {
-        return type == GraphType::ExponentialPopulationWithMortality;
+        constexpr double herbivoreGrowth = 0.05;
+        constexpr double carnivoreMortality = 0.02;
+        // Coefficients indicatifs par pas, dimensionnes d'apres les effectifs initiaux.
+        // Equilibre du modele : carnivores initiaux et 60 % des herbivores initiaux.
+        const double equilibriumCarnivores = std::max(1.0, initial.carnivores);
+        const double equilibriumHerbivores = std::max(1.0, 0.60 * initial.herbivores);
+        return {herbivoreGrowth, herbivoreGrowth / equilibriumCarnivores,
+                carnivoreMortality, carnivoreMortality / equilibriumHerbivores};
+    }
+
+    MathsFormulas::Populations prediction(float elapsed) const
+    {
+        if (type == GraphType::LotkaVolterra) return theoretical;
+        return {MathsFormulas::exp_population_with_mortality(
+                    initialHerbivores, GROWTH_RATE, MORTALITY_RATE, elapsed), 0.0};
     }
 
     std::vector<Plot::LegendEntry> legend() const
     {
-        std::vector<Plot::LegendEntry> entries{{"Population observee", OBSERVED_COLOR}};
-        if (hasFormula()) entries.push_back({"Formule (modele)", FORMULA_COLOR});
+        const bool lotkaVolterra = type == GraphType::LotkaVolterra;
+        std::vector<Plot::LegendEntry> entries{
+            {"Herbivores (simulation)", HERBIVORE_COLOR},
+            {"Carnivores (simulation)", CARNIVORE_COLOR},
+            {lotkaVolterra ? "Herbivores (Lotka-Volterra)" : "Herbivores (exponentiel)", PREDICTED_HERBIVORE_COLOR}
+        };
+        if (lotkaVolterra)
+            entries.push_back({"Carnivores (Lotka-Volterra)", PREDICTED_CARNIVORE_COLOR});
         return entries;
     }
 
@@ -100,25 +141,33 @@ private:
         double peak = 1.0;
         for (const Sample& sample : samples)
         {
-            if (std::isfinite(sample.observed)) peak = std::max(peak, static_cast<double>(sample.observed));
-            if (hasFormula() && std::isfinite(sample.predicted))
-                peak = std::max(peak, static_cast<double>(sample.predicted));
+            peak = std::max({peak, static_cast<double>(sample.herbivores),
+                            static_cast<double>(sample.carnivores)});
         }
+        // Le modele peut diverger : il ne doit jamais ecraser l'echelle de la simulation.
+        // Plot coupe seulement son trace aux axes, sans modifier les valeurs calculees.
         range.y1 = Plot::axisMaximum(peak);
         return range;
     }
 
-    void drawCurve(sf::RenderTarget& target, const sf::FloatRect& bounds,
-                   const Plot::Range& range, bool formula) const
+    static double population(const Sample& sample, Curve curve)
     {
-        const sf::Color color = formula ? FORMULA_COLOR : OBSERVED_COLOR;
+        if (curve == Curve::Herbivores) return sample.herbivores;
+        if (curve == Curve::Carnivores) return sample.carnivores;
+        if (curve == Curve::PredictedHerbivores) return sample.predicted.herbivores;
+        return sample.predicted.carnivores;
+    }
+
+    void drawCurve(sf::RenderTarget& target, const sf::FloatRect& bounds,
+                   const Plot::Range& range, Curve curve, sf::Color color) const
+    {
         for (std::size_t i = 1; i < samples.size(); ++i)
         {
             const Sample& previous = samples[i - 1];
             const Sample& current = samples[i];
             Plot::segment(target, bounds, range,
-                {previous.time, formula ? previous.predicted : previous.observed},
-                {current.time, formula ? current.predicted : current.observed}, color);
+                {previous.time, population(previous, curve)},
+                {current.time, population(current, curve)}, color);
         }
     }
 

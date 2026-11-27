@@ -9,11 +9,11 @@
 
 namespace //Variables container
 {
-    constexpr int WINDOW_WIDTH = 10000;
-    constexpr int WINDOW_HEIGHT = 10000;
-    constexpr int INITIAL_HERBIVORES = 100000;
-    constexpr int INITIAL_CARNIVORES = 200;
-    constexpr float TICKS_PER_SECOND = 50.0f;
+    constexpr int WINDOW_WIDTH = 100000;
+    constexpr int WINDOW_HEIGHT = 100000;
+    constexpr int INITIAL_HERBIVORES = 1000000;
+    constexpr int INITIAL_CARNIVORES = 1000000;
+    constexpr float TICKS_PER_SECOND = 50.0f; // TPS
 
     void seedPopulation(Grid& grid, int h_count, int c_count)
     {
@@ -59,6 +59,8 @@ namespace //Variables container
 
             carnivore->setAge(Random::inRange(Carnivore::MATURITY_AGE, Carnivore::MATURITY_AGE + 20));
             ++c_placed;
+
+
         }
     }
 }

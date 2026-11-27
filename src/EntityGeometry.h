@@ -14,7 +14,7 @@ class EntityGeometry
     std::vector<sf::Vertex> vertices;
 
 public:
-    static constexpr std::size_t VERTICES_PER_ENTITY = 6;
+    static constexpr std::size_t VERTICES_PER_ENTITY = 3;   // triangles
     static constexpr float RADIUS = Cell::CELL_SIZE * 0.35f;
 
     void rebuild(const Grid& grid)

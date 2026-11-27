@@ -8,6 +8,14 @@ https://docs.google.com/document/d/1V6TwwtPyWplslxlLsV6yeguGusbax4Ohi6p5mdXQ9ao/
     - esc : quit the simulation
 ```
 
+## Statistiques en direct
+
+Le panneau de la vue simulation affiche les effectifs et les taux observés de
+reproduction (naissances) et de mortalité de chaque espèce. Les taux sont exprimés
+en pourcentage par pas, sur les 50 derniers pas de simulation :
+`100 * nombre d'événements / somme des populations au début de chaque pas`.
+La population initiale est exclue des naissances mesurées. La pause fige les mesures.
+
 ## Générer un graphique avec python :
 *Pré-requis: pip et matplotlib (installé avec pip)*  
   

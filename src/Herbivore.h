@@ -12,7 +12,7 @@ public:
     static constexpr int MATURITY_AGE = 30;
     static constexpr int REPRODUCTION_COOLDOWN = 15;
     static constexpr int ELDERLY_THRESHOLD = 65;
-    static constexpr int MAX_AGE = 100; // guarranted death
+    static constexpr int MAX_AGE = 3650; // guarranted death
 
 private:
     int age = 0;
