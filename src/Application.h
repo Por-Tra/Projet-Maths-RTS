@@ -40,6 +40,7 @@ class Application
     sf::View gameView;
     sf::Time tickDuration;
     bool paused = false;
+    bool entitiesChanged = true;
 
     Tab currentTab{Tab::Simulation};
 
@@ -72,6 +73,7 @@ public:
         while (window.isOpen())
         {
             handleEvents();
+            if (!window.isOpen()) break;
 
             accumulator += clock.restart();
             if (accumulator > sf::seconds(MAX_FRAME_TIME)) accumulator = sf::seconds(MAX_FRAME_TIME);
@@ -81,6 +83,7 @@ public:
                 if (!paused)
                 {
                     grid.step();
+                    entitiesChanged = true;
                     appendCsvLine(csvFile, ++timeStep, grid);
                     graph.update(static_cast<float>(timeStep));
                     diagram.update(static_cast<float>(timeStep));
@@ -94,7 +97,8 @@ public:
             if (currentTab == Tab::Simulation)
             {
                 window.setView(gameView);
-                renderer.draw(window, grid);
+                renderer.draw(window, grid, entitiesChanged);
+                entitiesChanged = false;
             }
             else if (currentTab == Tab::Graph)
             {

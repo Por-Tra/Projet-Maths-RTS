@@ -78,27 +78,23 @@ public:
     {
         if (!canReproduce()) return;
 
-        for (const sf::Vector2i& direction : Grid::neighbourhood())
-        {
-            Entity* neighbour = grid.entityAt(position + direction);
-
-            // Test enum d'abord : on n'appelle static_cast que si c'est bien un herbivore.
-            if (neighbour == nullptr || neighbour->species() != Species::Herbivore) continue;
+        grid.visitOccupiedNeighbours(position, [&](Entity* neighbour) {
+            if (neighbour->species() != Species::Herbivore) return false;
 
             auto* partner = dynamic_cast<Herbivore*>(neighbour);
-            if (!partner->canReproduce()) continue;
-            if (isAFemale() == partner->isAFemale()) continue;
+            if (!partner->canReproduce()) return false;
+            if (isAFemale() == partner->isAFemale()) return false;
 
             const std::optional<sf::Vector2i> cradle = grid.randomFreeNeighbour(position);
-            if (!cradle) return; // pas de place autour : ce sera pour un autre tour
+            if (!cradle) return true; // no room: stop searching this tick
 
             if (grid.spawn<Herbivore>(*cradle, name + " Jr") != nullptr)
             {
                 cooldown = REPRODUCTION_COOLDOWN;
                 partner->cooldown = REPRODUCTION_COOLDOWN;
             }
-            return;
-        }
+            return true;
+        });
     }
 
     void killingHerbivores(Grid& grid, const bool printKillLog) override { } // USED IN CARNIVORE - PROB SHOULDN'T BE DONE THAT WAY

@@ -1,10 +1,12 @@
 #ifndef CARNIVORE_H
 #define CARNIVORE_H
 
+#include <iostream>
 #include <string>
 
 #include "Entity.h"
 #include "Grid.h"
+#include "Herbivore.h"
 #include "Random.h"
 
 class Carnivore : public Entity
@@ -110,16 +112,12 @@ public:
     {
         if (!canReproduce()) return;
 
-        for (const sf::Vector2i& direction : Grid::neighbourhood())
-        {
-            Entity* neighbour = grid.entityAt(position + direction);
-
-            // Test enum d'abord : on n'appelle static_cast que si c'est bien un herbivore.
-            if (neighbour == nullptr || neighbour->species() != Species::Carnivore) continue;
+        grid.visitOccupiedNeighbours(position, [&](Entity* neighbour) {
+            if (neighbour->species() != Species::Carnivore) return false;
 
             auto* partner = dynamic_cast<Carnivore*>(neighbour);
-            if (!partner->canReproduce()) continue;
-            if (isAFemale() == partner->isAFemale()) continue;
+            if (!partner->canReproduce()) return false;
+            if (isAFemale() == partner->isAFemale()) return false;
 
             // Chance de reproduction = satiété moyenne du couple (0% affamés -> 100% rassasiés)
             const float reproductionChance = (satietyRatio() + partner->satietyRatio()) * 0.5f;
@@ -129,32 +127,30 @@ public:
             if (roll >= static_cast<int>(reproductionChance * 100.0f))
             {
                 partner->kill();
-                return;
+                return true;
             }
 
             // Reproduce
             const std::optional<sf::Vector2i> cradle = grid.randomFreeNeighbour(position);
-            if (!cradle) return;
+            if (!cradle) return true;
 
             if (grid.spawn<Carnivore>(*cradle, name + " Jr") != nullptr)
             {
                 cooldown = REPRODUCTION_COOLDOWN;
                 partner->cooldown = REPRODUCTION_COOLDOWN;
-                return;
+                return true;
             }
-        }
+            return false;
+        });
     }
 
     //* ---- CONSUME Herbivores -----
     void killingHerbivores(Grid& grid, const bool printKillLog) override {
         if (!isAbleToConsume()) return; // Satiety Level isn't high enough
 
-        for (const sf::Vector2i& direction : Grid::neighbourhood())
-        {
-            Entity* neighbour = grid.entityAt(position + direction);
-
+        grid.visitOccupiedNeighbours(position, [&](Entity* neighbour) {
             // Verification if neighbour is a Herbivore
-            if (neighbour == nullptr || neighbour->species() != Species::Herbivore) continue;
+            if (neighbour->species() != Species::Herbivore) return false;
 
             auto* prey = dynamic_cast<Herbivore*>(neighbour);
 
@@ -165,8 +161,8 @@ public:
             if (printKillLog) // Killing Info
                 std::cout << "[" << name << "]" << " > Killed a Herbivore. (" << prey->getName() << " / +" << SATIETY_GAIN_VALUE << "S)" << std::endl;
 
-            return;
-        }
+            return true;
+        });
     }
 
 protected:
